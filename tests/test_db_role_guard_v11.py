@@ -20,3 +20,12 @@ def test_database_session_requires_rls_enabled():
 
 def test_identity_set_only_after_role_guard():
     assert API.index("Unsafe database role configuration") < API.index("set_config('app.current_user_id'")
+
+
+def test_runtime_login_must_be_non_privileged_and_unable_to_create_objects():
+    assert "login.rolcanlogin, login.rolsuper" in API
+    assert "login.rolbypassrls, login.rolcreatedb" in API
+    assert "login.rolcreaterole" in API
+    assert "has_schema_privilege(session_user, 'public', 'CREATE')" in API
+    assert "has_database_privilege(session_user, current_database(), 'CREATE')" in API
+    assert "not role_row[7] or any(role_row[8:14])" in API
