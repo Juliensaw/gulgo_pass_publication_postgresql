@@ -9,6 +9,8 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      POSTGRES_PASSWORD: ci-disposable-not-production
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -25,8 +27,6 @@ jobs:
       - name: Python tests
         run: python -m pytest -q tests
       - name: PostgreSQL 16 integration
-        env:
-          POSTGRES_PASSWORD: ci-disposable-not-production
         run: sh integration/run_postgres_tests.sh
       - name: Cleanup
         if: always()

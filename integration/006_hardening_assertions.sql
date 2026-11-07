@@ -12,7 +12,13 @@ DO $$ BEGIN
   RAISE EXCEPTION 'Application role can update immutable observations'; END IF;
  IF NOT has_function_privilege('gulgo_api','public.gulgo_append_observation(uuid,text,jsonb,text,date,date,text,uuid)','EXECUTE') THEN
   RAISE EXCEPTION 'App role cannot execute controlled append'; END IF;
- IF has_function_privilege('PUBLIC','public.gulgo_append_observation(uuid,text,jsonb,text,date,date,text,uuid)','EXECUTE') THEN
+ -- The ACL represents PUBLIC as grantee OID 0.
+ IF EXISTS (
+  SELECT 1 FROM pg_proc AS p
+  CROSS JOIN LATERAL aclexplode(COALESCE(p.proacl, acldefault('f', p.proowner))) AS acl
+  WHERE p.oid = 'public.gulgo_append_observation(uuid,text,jsonb,text,date,date,text,uuid)'::regprocedure
+    AND acl.grantee = 0 AND acl.privilege_type = 'EXECUTE'
+ ) THEN
   RAISE EXCEPTION 'Public can execute controlled append'; END IF;
 END $$;
 ROLLBACK;
