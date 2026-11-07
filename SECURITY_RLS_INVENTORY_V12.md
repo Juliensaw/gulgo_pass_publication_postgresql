@@ -28,3 +28,21 @@ Les définitions complètes des migrations initiales, les politiques RLS et les 
 
 ## Décision
 Ne pas présenter le contrôle actuel de `gulgo_runtime` comme une correction de l'usurpation SQL. Ne pas fusionner vers `main` ni autoriser des données réelles.
+
+
+## Inventaire complémentaire vérifié — migrations 001–008
+
+- `sql/001_init.sql` : tables `app_user`, `subject_representation`, `economic_subject`, `pass_dossier`, `variable_observation`, `evidence`, `audit_event` et objets métier. Le scoring est désactivé par contrainte.
+- `sql/002_integrity_security.sql` : `gulgo_actor_id()` retourne directement `current_setting('app.current_user_id', true)` converti en UUID. `gulgo_can_access_subject()` et `gulgo_can_access_dossier()` s'appuient sur cette valeur. Les politiques SELECT des tables métier dépendent de ces fonctions. Les mutations directes sont refusées par défaut.
+- `sql/003_access_roles.sql` : `gulgo_api` est NOLOGIN et NOBYPASSRLS, avec des privilèges SELECT ciblés ; `subject_representation` a une politique de lecture liée à l'identité GUC. Le rôle applicatif ne reçoit pas de droits directs d'écriture.
+- `sql/004_controlled_writes.sql` : `gulgo_create_dossier` et `gulgo_append_observation` sont `SECURITY DEFINER`, autorisent par `gulgo_actor_id()`, écrivent les objets et enregistrent des événements d'audit. Les privilèges EXECUTE sont accordés à `gulgo_api`.
+- `sql/006_rls_owner_compatibility.sql` : désactive `FORCE ROW LEVEL SECURITY` sur plusieurs tables pour permettre les écritures du propriétaire par `SECURITY DEFINER`. **Point de contrôle critique :** ces fonctions doivent être auditées et le propriétaire ne doit jamais servir de login applicatif.
+- `sql/007_runtime_login.sql` : `gulgo_runtime` est un rôle LOGIN non privilégié qui peut `SET ROLE gulgo_api`. Il ne lie pas à lui seul l'identité JWT à une identité SQL non falsifiable.
+- `sql/008_definer_search_path.sql` : fixe le `search_path` des deux fonctions privilégiées, sans corriger l'origine de l'identité.
+- `integration/018_guc_spoofed_write_demonstration.sql` : démontre aussi une **écriture non autorisée** après substitution de la GUC. Le risque affecte donc lecture ET écriture.
+
+## Conclusion de conception
+
+La vulnérabilité n'est pas limitée à une politique RLS : le même identifiant de session falsifiable alimente les politiques SELECT, les fonctions d'écriture privilégiées et l'attribution des événements d'audit. Un simple renforcement des JWT côté FastAPI ou du `search_path` SQL n'est pas une correction suffisante si un acteur conserve la possibilité d'exécuter du SQL arbitraire sous `gulgo_api`.
+
+Le prochain correctif doit supprimer la possibilité d'utiliser une identité arbitraire dans **tous** ces chemins, sans accorder des droits propriétaires à l'API. Concevoir d'abord une barrière de confiance testable, puis migrer de façon atomique les politiques, fonctions et routes concernées. Les tests doivent prouver le refus des lectures et écritures inter-utilisateurs malgré une tentative de substitution de GUC.
