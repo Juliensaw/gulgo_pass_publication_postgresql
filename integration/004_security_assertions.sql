@@ -19,17 +19,20 @@ DO $$ BEGIN
  IF has_table_privilege(current_user,'audit_event','SELECT') THEN RAISE EXCEPTION 'Audit table readable'; END IF;
 END $$;
 SELECT set_config('app.current_user_id','11111111-1111-4111-8111-111111111111',true);
+SELECT set_config('app.actor_mac',encode(public.hmac(convert_to('gulgo-actor-v12:11111111-1111-4111-8111-111111111111','UTF8'),decode(repeat('ab',32),'hex'),'sha256'),'hex'),true);
 DO $$ BEGIN
  IF (SELECT count(*) FROM pass_dossier) <> 1 THEN RAISE EXCEPTION 'A must see exactly one dossier'; END IF;
  IF EXISTS(SELECT 1 FROM pass_dossier WHERE id='dddddddd-dddd-4ddd-8ddd-dddddddddddd') THEN RAISE EXCEPTION 'Cross-tenant leak'; END IF;
  IF (SELECT count(*) FROM economic_subject) <> 1 THEN RAISE EXCEPTION 'Subject isolation failure'; END IF;
 END $$;
 SELECT set_config('app.current_user_id','22222222-2222-4222-8222-222222222222',true);
+SELECT set_config('app.actor_mac',encode(public.hmac(convert_to('gulgo-actor-v12:22222222-2222-4222-8222-222222222222','UTF8'),decode(repeat('ab',32),'hex'),'sha256'),'hex'),true);
 DO $$ BEGIN
  IF (SELECT count(*) FROM pass_dossier) <> 1 THEN RAISE EXCEPTION 'B must see exactly one dossier'; END IF;
  IF EXISTS(SELECT 1 FROM pass_dossier WHERE id='cccccccc-cccc-4ccc-8ccc-cccccccccccc') THEN RAISE EXCEPTION 'Cross-tenant leak'; END IF;
 END $$;
 SELECT set_config('app.current_user_id','',true);
+SELECT set_config('app.actor_mac','',true);
 DO $$ BEGIN
  IF EXISTS(SELECT 1 FROM pass_dossier) THEN RAISE EXCEPTION 'No-actor access leak'; END IF;
 END $$;
