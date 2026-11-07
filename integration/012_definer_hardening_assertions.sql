@@ -10,8 +10,12 @@ BEGIN
    AND p.prosecdef
    AND 'search_path=pg_catalog, public, pg_temp' = ANY(p.proconfig);
  IF n <> 2 THEN RAISE EXCEPTION 'Expected two hardened SECURITY DEFINER functions, found %',n; END IF;
- IF has_function_privilege('PUBLIC','public.gulgo_create_dossier(uuid,text)','EXECUTE')
- OR has_function_privilege('PUBLIC','public.gulgo_append_observation(uuid,text,jsonb,text,date,date,text,uuid)','EXECUTE')
- THEN RAISE EXCEPTION 'Public EXECUTE leaked on controlled-write functions'; END IF;
+ IF EXISTS (
+  SELECT 1 FROM pg_proc p JOIN pg_namespace ns ON ns.oid=p.pronamespace,
+       LATERAL aclexplode(COALESCE(p.proacl, acldefault('f',p.proowner))) a
+  WHERE ns.nspname='public'
+    AND p.proname IN ('gulgo_create_dossier','gulgo_append_observation')
+    AND a.grantee=0 AND a.privilege_type='EXECUTE'
+ ) THEN RAISE EXCEPTION 'Public EXECUTE leaked on controlled-write functions'; END IF;
 END $$;
 ROLLBACK;
