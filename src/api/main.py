@@ -112,14 +112,18 @@ def query_as_actor(actor: UUID, sql: str, args: tuple=()):
                     cur.execute("SELECT txid_current()")
                     transaction_id = cur.fetchone()[0]
                     actor_expires = str(int(datetime.now(timezone.utc).timestamp()) + 30)
+                    actor_key_id = os.environ.get("GULGO_ACTOR_KEY_ID", "primary")
+                    if not re.fullmatch(r"[a-z0-9_-]{1,32}", actor_key_id):
+                        raise HTTPException(503, "Actor signing key identifier invalid")
                     actor_mac = hmac.new(
                         signing_key,
-                        ("gulgo-actor-v131:" + str(actor) + ":" + str(transaction_id) + ":" + actor_expires).encode("utf-8"),
+                        ("gulgo-actor-v132:" + actor_key_id + ":" + str(actor) + ":" + str(transaction_id) + ":" + actor_expires).encode("utf-8"),
                         hashlib.sha256,
                     ).hexdigest()
                     cur.execute("SELECT set_config('app.current_user_id', %s, true)", (str(actor),))
                     cur.execute("SELECT set_config('app.actor_mac', %s, true)", (actor_mac,))
                     cur.execute("SELECT set_config('app.actor_expires', %s, true)", (actor_expires,))
+                    cur.execute("SELECT set_config('app.actor_key_id', %s, true)", (actor_key_id,))
                     cur.execute(sql, args)
                     return cur.fetchall()
     except psycopg.Error as exc:
