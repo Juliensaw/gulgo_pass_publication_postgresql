@@ -108,9 +108,12 @@ def query_as_actor(actor: UUID, sql: str, args: tuple=()):
                         signing_key = bytes.fromhex(identity_secret)
                     except ValueError as exc:
                         raise HTTPException(503, "Actor identity signing not configured") from exc
+                    # Obtain the transaction ID from the same live connection.
+                    cur.execute("SELECT txid_current()")
+                    transaction_id = cur.fetchone()[0]
                     actor_mac = hmac.new(
                         signing_key,
-                        ("gulgo-actor-v12:" + str(actor)).encode("utf-8"),
+                        ("gulgo-actor-v13:" + str(actor) + ":" + str(transaction_id)).encode("utf-8"),
                         hashlib.sha256,
                     ).hexdigest()
                     cur.execute("SELECT set_config('app.current_user_id', %s, true)", (str(actor),))
