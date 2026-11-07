@@ -6,7 +6,13 @@ BEGIN
  IF session_user <> 'gulgo_runtime' OR current_user <> 'gulgo_runtime' THEN
   RAISE EXCEPTION 'Expected direct gulgo_runtime login';
  END IF;
- IF has_table_privilege('public.economic_subject', 'SELECT') THEN
+ IF has_schema_privilege(current_user,'public','CREATE')
+ OR has_database_privilege(current_user,current_database(),'CREATE')
+ THEN RAISE EXCEPTION 'Runtime login has object-creation privileges'; END IF;
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname=current_user
+           AND (rolsuper OR rolbypassrls OR rolcreatedb OR rolcreaterole))
+ THEN RAISE EXCEPTION 'Runtime login has privileged role attributes'; END IF;
+  IF has_table_privilege('public.economic_subject', 'SELECT') THEN
   RAISE EXCEPTION 'Runtime login unexpectedly has direct table access';
  END IF;
 END $$;
