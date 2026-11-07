@@ -38,6 +38,7 @@ def test_all_protected_routes_reject_missing_token(monkeypatch):
         ("get", "/api/v1/subjects", None),
         ("get", "/api/v1/pass/dossiers", None),
         ("get", f"/api/v1/pass/dossiers/{dossier}", None),
+        ("get", f"/api/v1/pass/dossiers/{dossier}/observations", None),
         ("post", "/api/v1/pass/dossiers", {"subject_id": str(uuid4())}),
         ("post", f"/api/v1/pass/dossiers/{dossier}/observations",
          {"variable_code": "identity_verified", "data_status": "observed", "value": True}),
