@@ -28,5 +28,6 @@ BEGIN
  END IF;
 END $$;
 SELECT set_config('app.current_user_id','11111111-1111-4111-8111-111111111111',true);
+SELECT set_config('app.actor_mac',encode(public.hmac(convert_to('gulgo-actor-v12:11111111-1111-4111-8111-111111111111','UTF8'),decode(repeat('ab',32),'hex'),'sha256'),'hex'),true);
 SELECT count(*) FROM public.economic_subject;
 ROLLBACK;
