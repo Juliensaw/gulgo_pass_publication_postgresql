@@ -187,6 +187,70 @@ def dossier_observations(dossier_id: UUID, principal: Principal = Depends(verify
     }
 
 
+PASS_DIMENSIONS = {
+    "D1": "Identité & existence",
+    "D2": "Traçabilité & qualité des données",
+    "D3": "Activité & régularité économique",
+    "D4": "Discipline & engagements",
+    "D5": "Performance & résilience",
+    "D6": "Formalisation & gouvernance",
+}
+
+
+@app.get("/api/v1/pass/dossiers/{dossier_id}/catalog")
+def dossier_catalog(dossier_id: UUID, principal: Principal = Depends(verify_token)):
+    """Read variable/indicator catalogue for a visible dossier, never infer a score.
+
+    Catalogue rows are methodology metadata. The dossier visibility check
+    remains mandatory, including when no indicators have been registered.
+    """
+    dossier_rows = query_as_actor(
+        principal.user_id,
+        "SELECT methodology_id FROM pass_dossier WHERE id = %s",
+        (dossier_id,),
+    )
+    if not dossier_rows:
+        raise HTTPException(404, "Dossier not found")
+    methodology_id = dossier_rows[0][0]
+    rows = query_as_actor(principal.user_id, """
+        SELECT i.dimension_code, i.code, i.label,
+               v.code, v.label, v.value_type, v.critical
+        FROM indicator_definition AS i
+        LEFT JOIN indicator_variable AS iv
+          ON iv.methodology_id = i.methodology_id
+         AND iv.indicator_code = i.code
+        LEFT JOIN variable_definition AS v
+          ON v.methodology_id = iv.methodology_id
+         AND v.code = iv.variable_code
+        WHERE i.methodology_id = %s
+        ORDER BY i.dimension_code, i.code, v.code
+    """, (methodology_id,))
+    dimensions = [
+        {"code": code, "label": label, "indicators": []}
+        for code, label in PASS_DIMENSIONS.items()
+    ]
+    by_dimension = {d["code"]: d for d in dimensions}
+    indicators = {}
+    for dimension_code, indicator_code, indicator_label, variable_code, variable_label, value_type, critical in rows:
+        if dimension_code not in by_dimension:
+            raise HTTPException(503, "Invalid methodology catalogue")
+        key = (dimension_code, indicator_code)
+        if key not in indicators:
+            item = {"code": indicator_code, "label": indicator_label, "variables": []}
+            by_dimension[dimension_code]["indicators"].append(item)
+            indicators[key] = item
+        if variable_code is not None:
+            indicators[key]["variables"].append({
+                "code": variable_code, "label": variable_label,
+                "value_type": value_type, "critical": critical,
+            })
+    return {
+        "dossier_id": str(dossier_id), "methodology_id": methodology_id,
+        "dimensions": dimensions, "scoring_enabled": False,
+        "catalogue_status": "configured" if rows else "not_configured",
+    }
+
+
 class CreateDossier(BaseModel):
     subject_id: UUID
     methodology_id: str = "GULGO_PASS_V1_PILOT"
