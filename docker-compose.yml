@@ -22,5 +22,6 @@ services:
       - ./sql/009_catalog_read_grants.sql:/docker-entrypoint-initdb.d/009_catalog_read_grants.sql:ro
       - ./sql/010_signed_actor_context.sql:/docker-entrypoint-initdb.d/010_signed_actor_context.sql:ro
       - ./sql/011_transaction_bound_identity.sql:/docker-entrypoint-initdb.d/011_transaction_bound_identity.sql:ro
+      - ./sql/012_expiring_actor_identity.sql:/docker-entrypoint-initdb.d/012_expiring_actor_identity.sql:ro
     tmpfs:
       - /var/lib/postgresql/data
