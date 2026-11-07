@@ -1,0 +1,33 @@
+name: GULGO PASS PostgreSQL integration
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify backend source is published
+        run: |
+          test -f requirements-v05.txt
+          test -f integration/run_postgres_tests.sh
+          test -f sql/001_init.sql
+          test -f sql/006_rls_owner_compatibility.sql
+      - name: Install dependencies
+        run: python -m pip install -r requirements-v05.txt
+      - name: Python tests
+        run: python -m pytest -q tests
+      - name: PostgreSQL 16 integration
+        env:
+          POSTGRES_PASSWORD: ci-disposable-not-production
+        run: sh integration/run_postgres_tests.sh
+      - name: Cleanup
+        if: always()
+        run: docker compose down -v --remove-orphans
