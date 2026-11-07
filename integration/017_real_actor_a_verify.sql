@@ -3,6 +3,7 @@
 BEGIN;
 SET LOCAL ROLE gulgo_api;
 SELECT set_config('app.current_user_id','33333333-3333-4333-8333-333333333333',true);
+SELECT set_config('app.actor_mac',encode(public.hmac(convert_to('gulgo-actor-v12:33333333-3333-4333-8333-333333333333','UTF8'),decode(repeat('ab',32),'hex'),'sha256'),'hex'),true);
 DO $$
 BEGIN
  IF session_user <> 'gulgo_runtime' THEN
