@@ -80,6 +80,21 @@ def query_as_actor(actor: UUID, sql: str, args: tuple=()):
         # Do not expose SQL or connection information to callers.
         raise HTTPException(503, "Database operation failed") from exc
 
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+def institutional_home():
+    """Institutional prototype; no sign-up or pre-evaluation collection."""
+    page = Path(__file__).with_name("home.html")
+    return HTMLResponse(page.read_text(encoding="utf-8"), headers={
+        "Cache-Control": "no-store",
+        "Content-Security-Policy": (
+            "default-src 'none'; style-src 'unsafe-inline'; "
+            "base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+        ),
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "no-referrer",
+    })
+
+
 @app.get("/demo/pass", response_class=HTMLResponse, include_in_schema=False)
 def pass_demo():
     """Non-production demonstration UI, served from the API's own origin."""
