@@ -18,4 +18,14 @@ docker compose exec -T -e PGPASSWORD="$POSTGRES_PASSWORD" postgres \
 docker compose exec -T -e PGPASSWORD="ci-only-runtime-disposable" postgres \
   psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -U gulgo_runtime -d gulgo_test \
   < integration/010_real_login_assertions.sql
+# Committed synthetic fixtures exist only in the disposable database.
+# Three separate REAL runtime login sessions must preserve tenant separation.
+docker compose exec -T -e PGPASSWORD="$POSTGRES_PASSWORD" postgres \
+  psql -X -v ON_ERROR_STOP=1 -U gulgo_owner -d gulgo_test \
+  < integration/014_two_actor_fixture_setup.sql
+for script in integration/015_real_actor_a.sql integration/016_real_actor_b.sql integration/017_real_actor_a_verify.sql; do
+  docker compose exec -T -e PGPASSWORD="ci-only-runtime-disposable" postgres \
+    psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -U gulgo_runtime -d gulgo_test \
+    < "$script"
+done
 printf '\nPostgreSQL integration assertions completed.\n'
