@@ -66,7 +66,8 @@ details{margin:14px 0}summary{cursor:pointer;font-weight:600}
 <div class="dimension" data-code="D5"><b>D5 · Performance et résilience</b><span>Formulaire métier à connecter</span></div>
 <div class="dimension" data-code="D6"><b>D6 · Formalisation et gouvernance</b><span>Formulaire métier à connecter</span></div>
 </div>
-<p class="small">Les observations ne sont pas attribuées artificiellement aux dimensions : cette association nécessite le catalogue validé des variables et indicateurs.</p>
+<p class="small">Les champs ci-dessous apparaissent uniquement lorsqu'une variable est enregistrée dans le référentiel. Aucun score n'est calculé.</p>
+<div id="editor"></div>
 <h3>Historique des observations</h3><div id="observations"><p class="small">Aucun dossier sélectionné.</p></div>
 </section>
 </div>
@@ -74,7 +75,7 @@ details{margin:14px 0}summary{cursor:pointer;font-weight:600}
 <script>
 "use strict";
 const el=id=>document.getElementById(id);
-let jwtToken="",selectedDossier=null;
+let jwtToken="",selectedDossier=null,selectedStatus=null,requestEpoch=0;
 function notice(message,error=false){el("message").textContent=message;el("message").className=error?"error":""}
 function clear(node){node.replaceChildren()}
 function paragraph(parent,value,cls="small"){const p=document.createElement("p");p.textContent=value;p.className=cls;parent.append(p)}
@@ -84,11 +85,101 @@ async function request(path,options={}){
  if(!response.ok)throw new Error(response.status===401?"Jeton invalide ou expiré.":response.status===404?"Dossier introuvable ou inaccessible.":"La requête a échoué ("+response.status+").");
  return response.json();
 }
+function buildEditor(catalogue,id){
+ const root=el("editor");clear(root);
+ if(catalogue.catalogue_status!=="configured"){
+   paragraph(root,"Le référentiel métier de cette méthodologie n'est pas encore renseigné.");
+   return;
+ }
+ const supported=new Set(["text","number","boolean","date"]);
+ const seen=new Set();
+ const variables=[];
+ catalogue.dimensions.forEach(d=>d.indicators.forEach(i=>i.variables.forEach(v=>{
+   if(!seen.has(v.code)){seen.add(v.code);variables.push({...v,dimension:d.label})}
+ })));
+ if(!variables.length){paragraph(root,"Aucune variable saisissable n'est enregistrée.");return}
+ const heading=document.createElement("h3");heading.textContent="Saisir une observation";root.append(heading);
+ if(selectedStatus!=="draft"){
+   paragraph(root,"Ce dossier n'est pas un brouillon. L'ajout d'observations est désactivé.");return
+ }
+ const form=document.createElement("form");form.autocomplete="off";
+ const variableLabel=document.createElement("label");variableLabel.textContent="Variable du référentiel";variableLabel.htmlFor="variable-input";form.append(variableLabel);
+ const selector=document.createElement("select");selector.id="variable-input";selector.required=true;
+ variables.forEach(v=>{
+   const option=document.createElement("option");
+   option.value=v.code;
+   option.textContent=v.dimension+" — "+v.label+(v.critical?" (critique)":"")+(supported.has(v.value_type)?"":" (saisie non disponible)");
+   option.disabled=!supported.has(v.value_type);
+   selector.append(option)
+ });
+ form.append(selector);
+ const statusLabel=document.createElement("label");statusLabel.textContent="État de la donnée";statusLabel.htmlFor="data-status";form.append(statusLabel);
+ const status=document.createElement("select");status.id="data-status";
+ [["available","Disponible"],["missing","Manquante"],["refused","Non communiquée"],["temporarily_unavailable","Temporairement indisponible"],["under_verification","En cours de vérification"]].forEach(([value,label])=>{
+   const option=document.createElement("option");option.value=value;option.textContent=label;status.append(option)
+ });form.append(status);
+ const valueLabel=document.createElement("label");valueLabel.textContent="Valeur";valueLabel.htmlFor="observation-value";form.append(valueLabel);
+ const valueBox=document.createElement("div");form.append(valueBox);
+ function makeValueControl(){
+   clear(valueBox);
+   const variable=variables.find(v=>v.code===selector.value);
+   if(!variable){return}
+   if(variable.value_type==="boolean"){
+     const input=document.createElement("select");input.id="observation-value";
+     [["","Sélectionner"],["true","Oui"],["false","Non"]].forEach(([v,t])=>{const opt=document.createElement("option");opt.value=v;opt.textContent=t;input.append(opt)});
+     valueBox.append(input)
+   }else{
+     const input=document.createElement("input");input.id="observation-value";
+     input.type=variable.value_type==="number"?"number":variable.value_type==="date"?"date":"text";
+     if(variable.value_type==="number")input.step="any";
+     input.maxLength=2000;
+     valueBox.append(input)
+   }
+   valueBox.querySelector("#observation-value").required=status.value==="available";
+   valueBox.querySelector("#observation-value").disabled=status.value!=="available";
+ }
+ selector.addEventListener("change",makeValueControl);
+ status.addEventListener("change",()=>{
+   const input=valueBox.querySelector("#observation-value");
+   if(input){input.disabled=status.value!=="available";input.required=status.value==="available"}
+ });
+ makeValueControl();
+ const sourceLabel=document.createElement("label");sourceLabel.textContent="Type de source (facultatif)";sourceLabel.htmlFor="observation-source";form.append(sourceLabel);
+ const source=document.createElement("input");source.id="observation-source";source.maxLength=100;source.placeholder="Ex. : auto-déclaration";form.append(source);
+ const submit=document.createElement("button");submit.type="submit";submit.textContent="Enregistrer l'observation";form.append(submit);
+ const help=document.createElement("p");help.className="small";help.textContent="Les variables de type enum et json nécessitent une configuration métier avant saisie. Toute correction ultérieure doit créer une nouvelle observation liée à l'ancienne.";form.append(help);
+ form.addEventListener("submit",async event=>{
+   event.preventDefault();
+   if(id!==selectedDossier)return;
+   if(!form.reportValidity())return;
+   const variable=variables.find(v=>v.code===selector.value);
+   if(!variable||!supported.has(variable.value_type))return notice("Type de variable non pris en charge.",true);
+   const input=valueBox.querySelector("#observation-value");
+   let value=null;
+   if(status.value==="available"){
+     const raw=input.value;
+     if(raw==="")return notice("Saisir une valeur.",true);
+     if(variable.value_type==="number"){value=Number(raw);if(!Number.isFinite(value))return notice("Nombre invalide.",true)}
+     else if(variable.value_type==="boolean")value=raw==="true";
+     else value=raw;
+   }
+   const payload={variable_code:variable.code,data_status:status.value,value,source_type:source.value.trim()||null};
+   submit.disabled=true;
+   try{
+     await request("/api/v1/pass/dossiers/"+encodeURIComponent(id)+"/observations",{method:"POST",body:JSON.stringify(payload)});
+     if(id===selectedDossier){notice("Observation enregistrée.");await selectDossier(id)}
+   }catch(e){notice(e.message,true)}
+   finally{submit.disabled=false}
+ });
+ root.append(form);
+}
 async function loadCatalogue(id){
  const cards=[...document.querySelectorAll(".dimension")];
  cards.forEach(card=>card.querySelector("span").textContent="Chargement du référentiel...");
  try {
    const result=await request("/api/v1/pass/dossiers/"+encodeURIComponent(id)+"/catalog");
+   if(id!==selectedDossier)return;
+   buildEditor(result,id);
    const byCode=new Map(result.dimensions.map(d=>[d.code,d]));
    cards.forEach(card=>{
      const dimension=byCode.get(card.dataset.code);
@@ -106,12 +197,19 @@ async function loadCatalogue(id){
  }
 }
 async function selectDossier(id){
- selectedDossier=id;
- clear(el("selected"));clear(el("observations"));
+ const epoch=++requestEpoch;
+ selectedDossier=id;selectedStatus=null;
+ clear(el("selected"));clear(el("observations"));clear(el("editor"));
  paragraph(el("selected"),"Dossier : "+id);
- await loadCatalogue(id);
  try {
+   const dossier=await request("/api/v1/pass/dossiers/"+encodeURIComponent(id));
+   if(epoch!==requestEpoch)return;
+   selectedStatus=dossier.status;
+   await loadCatalogue(id);
+   if(epoch!==requestEpoch)return;
+   
    const result=await request("/api/v1/pass/dossiers/"+encodeURIComponent(id)+"/observations");
+   if(epoch!==requestEpoch)return;
    const observations=result.observations||[];
    if(!observations.length)paragraph(el("observations"),"Ce dossier ne contient pas encore d'observations.");
    observations.forEach(item=>{
@@ -127,7 +225,7 @@ async function selectDossier(id){
 }
 async function load(){
  jwtToken=el("token").value.trim();el("token").value="";
- selectedDossier=null;clear(el("dossiers"));clear(el("observations"));clear(el("selected"));
+ selectedDossier=null;selectedStatus=null;requestEpoch++;clear(el("editor"));clear(el("dossiers"));clear(el("observations"));clear(el("selected"));
  document.querySelectorAll(".dimension span").forEach(node=>node.textContent="Sélectionnez un dossier pour charger le référentiel.");
  try{
    const [subjects,dossiers]=await Promise.all([request("/api/v1/subjects"),request("/api/v1/pass/dossiers")]);
@@ -141,7 +239,7 @@ async function load(){
  }catch(e){notice(e.message,true);jwtToken="";el("create").disabled=true}
 }
 el("load").addEventListener("click",load);
-el("disconnect").addEventListener("click",()=>{jwtToken="";selectedDossier=null;el("token").value="";["dossiers","observations","selected"].forEach(id=>clear(el(id)));el("subject").replaceChildren();el("create").disabled=true;document.querySelectorAll(".dimension span").forEach(node=>node.textContent="Accès effacé.");notice("Jeton effacé de la mémoire de cette page.")});
+el("disconnect").addEventListener("click",()=>{jwtToken="";selectedDossier=null;selectedStatus=null;requestEpoch++;clear(el("editor"));el("token").value="";["dossiers","observations","selected"].forEach(id=>clear(el(id)));el("subject").replaceChildren();el("create").disabled=true;document.querySelectorAll(".dimension span").forEach(node=>node.textContent="Accès effacé.");notice("Jeton effacé de la mémoire de cette page.")});
 el("create").addEventListener("click",async()=>{
  if(!el("subject").value)return notice("Sélectionnez une activité.",true);
  try{
