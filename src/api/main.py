@@ -34,16 +34,15 @@ def verify_token(authorization: str | None = Header(default=None)) -> Principal:
 
 
 def validate_api_sql(sql: str) -> None:
-    """Defense in depth: only one static SELECT statement per API call.
+    """Defense in depth: accept only one developer-authored SELECT statement.
 
-    This is not an SQL parser or a fix for direct database access/GUC spoofing.
-    SQL must remain authored by trusted developers; values use bind parameters.
+    This is not a SQL parser or a fix for direct SQL access/GUC spoofing.
     """
     statement = sql.strip()
-    if (not re.match(r"(?is)^SELECT\\s+", statement)
-            or re.search(r";|--|/\\*|\\*/", statement)
-            or re.search(r"(?i)\\b(?:set_config|current_setting|set|reset|copy|"
-                         r"pg_sleep|dblink|lo_import|lo_export)\\s*\\(", statement)):
+    if (not re.match(r"(?is)^SELECT\s+", statement)
+            or re.search(r";|--|/\*|\*/", statement)
+            or re.search(r"(?i)\b(?:set_config|current_setting|set|reset|copy|"
+                         r"pg_sleep|dblink|lo_import|lo_export)\s*\(", statement)):
         raise HTTPException(503, "Unsafe application SQL")
 
 
