@@ -46,6 +46,8 @@ def query_as_actor(actor: UUID, sql: str, args: tuple=()):
             with conn.transaction():
                 with conn.cursor() as cur:
                     # Fail closed: API queries must run as the non-owner, non-BYPASSRLS role.
+                    # Also reject an unexpectedly privileged runtime login, including
+                    # schema/database CREATE grants that can enable escalation paths.
                     # Checking both session_user and current_user rejects privileged
                     # owner/superuser connections even if they SET ROLE gulgo_api.
                     # Runtime login must be a separate unprivileged role granted
@@ -63,15 +65,23 @@ def query_as_actor(actor: UUID, sql: str, args: tuple=()):
                                  WHERE n.nspname = 'public'
                                    AND c.relname IN ('economic_subject', 'pass_dossier')
                                    AND c.relowner = (SELECT oid FROM pg_roles WHERE rolname = session_user)
-                               ) AS owns_protected_table
-                        FROM pg_roles r WHERE r.rolname = current_user
+                               ) AS owns_protected_table,
+                               login.rolcanlogin, login.rolsuper,
+                               login.rolbypassrls, login.rolcreatedb,
+                               login.rolcreaterole,
+                               has_schema_privilege(session_user, 'public', 'CREATE'),
+                               has_database_privilege(session_user, current_database(), 'CREATE')
+                        FROM pg_roles r
+                        JOIN pg_roles login ON login.rolname = session_user
+                        WHERE r.rolname = current_user
                     """)
                     role_row = cur.fetchone()
                     if (not role_row or role_row[0] != "gulgo_api"
                             or role_row[1] != "gulgo_runtime"
                             or role_row[2] != "on"
                             or role_row[3] != "off"
-                            or role_row[4] or role_row[5] or role_row[6]):
+                            or role_row[4] or role_row[5] or role_row[6]
+                            or not role_row[7] or any(role_row[8:14])):
                         raise HTTPException(503, "Unsafe database role configuration")
                     cur.execute("SELECT set_config('app.current_user_id', %s, true)", (str(actor),))
                     cur.execute(sql, args)
