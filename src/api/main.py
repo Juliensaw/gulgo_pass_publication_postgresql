@@ -1,4 +1,4 @@
-"""GULGO PASS experimental read-only API. No write or scoring endpoints."""
+"""GULGO PASS pilot API: controlled dossier writes; scoring disabled."""
 import os
 from datetime import datetime, timezone
 from uuid import UUID
@@ -66,7 +66,7 @@ def query_as_actor(actor: UUID, sql: str, args: tuple=()):
                     """)
                     role_row = cur.fetchone()
                     if (not role_row or role_row[0] != "gulgo_api"
-                            or role_row[1] == "gulgo_api"
+                            or role_row[1] != "gulgo_runtime"
                             or role_row[2] != "on"
                             or role_row[3] != "off"
                             or role_row[4] or role_row[5] or role_row[6]):
