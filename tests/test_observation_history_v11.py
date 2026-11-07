@@ -65,7 +65,7 @@ def test_empty_accessible_dossier_returns_empty_list(monkeypatch):
 
     def fake_query(who, sql, args=()):
         calls.append((who, sql, args))
-        return [(1,)] if "SELECT 1 FROM pass_dossier" in sql else []
+        return [(1,)] if sql.lstrip().startswith("SELECT 1 FROM pass_dossier") else []
 
     monkeypatch.setattr(main, "query_as_actor", fake_query)
     response = client.get(f"/api/v1/pass/dossiers/{dossier}/observations", headers=auth(actor))
@@ -89,7 +89,7 @@ def test_observation_list_query_param_cannot_change_actor(monkeypatch):
 
     def fake_query(who, sql, args=()):
         seen.append((who, sql, args))
-        return [(1,)] if "SELECT 1 FROM pass_dossier" in sql else []
+        return [(1,)] if sql.lstrip().startswith("SELECT 1 FROM pass_dossier") else []
 
     monkeypatch.setattr(main, "query_as_actor", fake_query)
     response = client.get(
