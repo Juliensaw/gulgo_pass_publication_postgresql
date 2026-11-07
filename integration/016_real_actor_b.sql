@@ -3,7 +3,7 @@
 BEGIN;
 SET LOCAL ROLE gulgo_api;
 SELECT set_config('app.current_user_id','44444444-4444-4444-8444-444444444444',true);
-SELECT set_config('app.actor_mac',encode(public.hmac(convert_to('gulgo-actor-v12:44444444-4444-4444-8444-444444444444','UTF8'),decode(repeat('ab',32),'hex'),'sha256'),'hex'),true);
+SELECT set_config('app.actor_mac',encode(public.hmac(convert_to('gulgo-actor-v13:44444444-4444-4444-8444-444444444444:' || txid_current()::text,'UTF8'),decode(repeat('ab',32),'hex'),'sha256'),'hex'),true);
 DO $$
 DECLARE v_observation uuid;
 BEGIN
