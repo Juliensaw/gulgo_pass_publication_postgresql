@@ -75,3 +75,24 @@ constitue pas une inscription ni une promesse d'accès au financement.
 À ce stade, la présence d'une page et de tests unitaires ne constitue ni
 une validation ergonomique par des utilisateurs ni une autorisation de mise
 en production. Voir `MVP_DELIVERY_PLAN_V11.md` pour les conditions de sortie.
+
+## Catalogue métier PASS — lecture seule
+
+Une route authentifiée `GET /api/v1/pass/dossiers/{dossier_id}/catalog`
+lit les définitions de la méthodologie associée à un dossier visible par
+l'utilisateur. Elle renvoie les six dimensions dans l'ordre officiel, les
+indicateurs et les variables réellement enregistrés dans les tables
+`indicator_definition`, `indicator_variable` et `variable_definition`.
+Les métadonnées du catalogue sont accessibles en **lecture seule** au rôle
+applicatif après la migration `sql/009_catalog_read_grants.sql`.
+La route refuse les dossiers invisibles par une réponse 404.
+
+Dans le démonstrateur `/demo/pass`, les six cartes affichent le nombre
+d'indicateurs et de variables lorsque le catalogue existe. La présence de
+tables ne signifie **pas** que le référentiel métier est renseigné ou
+validé : si aucune définition n'est chargée, le résultat indique
+`catalogue_status: not_configured`. Aucun indicateur, questionnaire ou
+score n'est créé automatiquement, et les formulaires restent à développer.
+
+Cette étape ne résout pas le risque de falsification de l'identité SQL
+documenté dans `SECURITY_IDENTITY_DECISION_V11.md`.
