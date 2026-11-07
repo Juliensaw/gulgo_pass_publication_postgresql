@@ -9,7 +9,7 @@ def test_database_session_checks_effective_role():
 
 
 def test_database_session_rejects_privileged_login():
-    assert 'role_row[1] == "gulgo_api"' in API
+    assert 'role_row[1] != "gulgo_runtime"' in API
     assert 'role_row[3] != "off"' in API
     assert "role_row[4] or role_row[5] or role_row[6]" in API
 
