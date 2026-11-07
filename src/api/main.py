@@ -46,6 +46,10 @@ def query_as_actor(actor: UUID, sql: str, args: tuple=()):
                     # Fail closed: API queries must run as the non-owner, non-BYPASSRLS role.
                     # Checking both session_user and current_user rejects privileged
                     # owner/superuser connections even if they SET ROLE gulgo_api.
+                    # Runtime login must be a separate unprivileged role granted
+                    # SET permission on gulgo_api. SET LOCAL applies only to
+                    # this transaction and is checked against role membership.
+                    cur.execute("SET LOCAL ROLE gulgo_api")
                     cur.execute("""
                         SELECT current_user, session_user,
                                current_setting('row_security'),
