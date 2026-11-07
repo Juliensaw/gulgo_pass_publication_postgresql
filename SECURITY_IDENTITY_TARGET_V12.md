@@ -69,3 +69,17 @@ Ne pas substituer un vérificateur cryptographique expérimental au système
 actuel sans suite d'intégration et audit. La bascule doit être atomique :
 migration SQL, API, RLS, fonctions d'écriture, tests d'attaque et procédure
 de rotation. La réussite de CI seule n'autorise pas la production.
+
+## Nouvelle preuve d'attaque — lecture et écriture
+
+`integration/018_guc_spoofed_write_demonstration.sql` complète le test
+011 : sous le rôle applicatif SQL, un attaquant capable de modifier la GUC
+peut non seulement lire le dossier d'une autre identité, mais aussi y
+**ajouter une observation** via `gulgo_append_observation`. La fixture est
+fictive et annulée par `ROLLBACK`. Le succès du test confirme l'existence
+de la faille ; il **ne valide pas** la sécurité du produit.
+
+Cette reproduction interdit de considérer le durcissement des attributs
+de `gulgo_runtime` comme une solution suffisante. La prochaine migration
+devra faire échouer les scénarios 011 et 018 dans leur forme actuelle,
+puis les remplacer par des assertions de refus de l'usurpation.
