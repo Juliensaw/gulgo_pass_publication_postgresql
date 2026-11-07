@@ -95,6 +95,22 @@ def institutional_home():
     })
 
 
+@app.get("/demo/pre-evaluation", response_class=HTMLResponse, include_in_schema=False)
+def pre_evaluation_demo():
+    """Anonymous orientation checklist: no scoring, eligibility decision or persistence."""
+    page = Path(__file__).with_name("pre_evaluation_demo.html")
+    return HTMLResponse(page.read_text(encoding="utf-8"), headers={
+        "Cache-Control": "no-store",
+        "Content-Security-Policy": (
+            "default-src 'none'; script-src 'unsafe-inline'; "
+            "style-src 'unsafe-inline'; form-action 'none'; "
+            "base-uri 'none'; frame-ancestors 'none'"
+        ),
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "no-referrer",
+    })
+
+
 @app.get("/demo/pass", response_class=HTMLResponse, include_in_schema=False)
 def pass_demo():
     """Non-production demonstration UI, served from the API's own origin."""
