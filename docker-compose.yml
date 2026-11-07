@@ -17,5 +17,8 @@ services:
       - ./sql/004_controlled_writes.sql:/docker-entrypoint-initdb.d/004_controlled_writes.sql:ro
       - ./sql/005_integrity_hardening.sql:/docker-entrypoint-initdb.d/005_integrity_hardening.sql:ro
       - ./sql/006_rls_owner_compatibility.sql:/docker-entrypoint-initdb.d/006_rls_owner_compatibility.sql:ro
+      - ./sql/007_runtime_login.sql:/docker-entrypoint-initdb.d/007_runtime_login.sql:ro
+      - ./sql/008_definer_search_path.sql:/docker-entrypoint-initdb.d/008_definer_search_path.sql:ro
+      - ./sql/009_catalog_read_grants.sql:/docker-entrypoint-initdb.d/009_catalog_read_grants.sql:ro
     tmpfs:
       - /var/lib/postgresql/data

@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>GULGO PASS — Démonstrateur</title>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#172a3a;background:#f5f7fa}
+*{box-sizing:border-box}body{margin:0}header{padding:22px max(24px,calc((100vw - 1140px)/2));background:#102d48;color:#fff}
+header h1{margin:0;font-size:1.5rem}header p{margin:7px 0 0;color:#dce8f4}
+main{max-width:1140px;margin:26px auto;padding:0 20px}
+.warning{padding:12px 16px;background:#fff3e4;border-left:4px solid #c57b23;margin-bottom:18px}
+.grid{display:grid;grid-template-columns:280px 1fr;gap:18px}
+section,aside{background:white;border:1px solid #d9e2ea;border-radius:12px;padding:20px;min-width:0}
+h2{font-size:1.1rem;margin:0 0 16px}h3{font-size:1rem;margin:18px 0 8px}
+label{display:block;font-weight:600;margin:12px 0 6px;font-size:.91rem}
+input,select,button{font:inherit;border-radius:8px}
+input,select{width:100%;padding:10px;border:1px solid #9cabb9;background:white}
+button{border:0;padding:10px 13px;background:#174d75;color:white;cursor:pointer}
+button.secondary{background:#e8eef4;color:#18374c}
+button:disabled{opacity:.55;cursor:not-allowed}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+.small{font-size:.85rem;color:#526477}
+ol{padding-left:20px;line-height:1.8}
+.list{display:grid;gap:8px}
+.list button{text-align:left;background:#edf3f8;color:#122f45;width:100%;overflow-wrap:anywhere}
+.list button[aria-current=true]{background:#c6e2f0;outline:2px solid #31698c}
+.dimensions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:16px 0}
+.dimension{padding:12px;border:1px solid #dae4eb;border-radius:8px;background:#f8fafb}
+.dimension b{display:block;font-size:.87rem}.dimension span{font-size:.8rem;color:#586c7c}
+.item{padding:12px;border:1px solid #e3e9ed;border-radius:8px;margin:9px 0;overflow-wrap:anywhere}
+.item code{white-space:pre-wrap}#message{min-height:24px;font-weight:600}#message.error{color:#a12727}
+details{margin:14px 0}summary{cursor:pointer;font-weight:600}
+@media(max-width:760px){.grid{grid-template-columns:1fr}.dimensions{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><h1>GULGO PASS</h1><p>Espace dossier — démonstrateur technique V1.1</p></header>
+<main>
+<div class="warning"><strong>Environnement de démonstration uniquement.</strong> Utiliser exclusivement des comptes et données fictifs. L'identité SQL et l'exploitation restent à sécuriser avant une ouverture réelle.</div>
+<div class="grid">
+<aside>
+<h2>Accès temporaire</h2>
+<p class="small">La connexion et la création des comptes ne sont pas encore intégrées. Saisissez uniquement un jeton JWT de test émis pour cet environnement. Le jeton reste en mémoire et n'est pas stocké dans le navigateur.</p>
+<label for="token">Jeton de test</label><input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="JWT fictif" aria-label="Jeton de test">
+<div class="actions"><button id="load">Charger mes dossiers</button><button id="disconnect" class="secondary">Effacer l'accès</button></div>
+<h2>Dossiers accessibles</h2><div id="dossiers" class="list"><p class="small">Aucun dossier chargé.</p></div>
+</aside>
+<section>
+<h2>Constitution du dossier PASS</h2>
+<p id="message" role="status" aria-live="polite"></p>
+<details>
+<summary>Créer un dossier pour une activité déjà enregistrée</summary>
+<label for="subject">Activité économique</label><select id="subject"><option value="">Charger les activités d'abord</option></select>
+<div class="actions"><button id="create" disabled>Créer un dossier brouillon</button></div>
+<p class="small">La création d'une activité n'est pas encore disponible dans cet écran.</p>
+</details>
+<div id="selected"><p class="small">Sélectionnez un dossier pour consulter son historique.</p></div>
+<div class="actions"><button id="pdf-report" disabled>Télécharger le rapport descriptif PDF</button></div>
+<p class="small">Rapport de démonstration non certifié, sans score ni décision d'admissibilité.</p>
+<h3>Les six dimensions PASS</h3>
+<div class="dimensions">
+<div class="dimension" data-code="D1"><b>D1 · Identité et existence</b><span>Formulaire métier à connecter</span></div>
+<div class="dimension" data-code="D2"><b>D2 · Traçabilité et qualité des données</b><span>Formulaire métier à connecter</span></div>
+<div class="dimension" data-code="D3"><b>D3 · Activité et régularité économique</b><span>Formulaire métier à connecter</span></div>
+<div class="dimension" data-code="D4"><b>D4 · Discipline et engagements</b><span>Formulaire métier à connecter</span></div>
+<div class="dimension" data-code="D5"><b>D5 · Performance et résilience</b><span>Formulaire métier à connecter</span></div>
+<div class="dimension" data-code="D6"><b>D6 · Formalisation et gouvernance</b><span>Formulaire métier à connecter</span></div>
+</div>
+<p class="small">Les champs ci-dessous apparaissent uniquement lorsqu'une variable est enregistrée dans le référentiel. Aucun score n'est calculé.</p>
+<div id="editor"></div>
+<h3>Historique des observations</h3><div id="observations"><p class="small">Aucun dossier sélectionné.</p></div>
+</section>
+</div>
+</main>
+<script>
+"use strict";
+const el=id=>document.getElementById(id);
+let jwtToken="",selectedDossier=null,selectedStatus=null,requestEpoch=0;
+function notice(message,error=false){el("message").textContent=message;el("message").className=error?"error":""}
+function clear(node){node.replaceChildren()}
+function paragraph(parent,value,cls="small"){const p=document.createElement("p");p.textContent=value;p.className=cls;parent.append(p)}
+async function request(path,options={}){
+ if(!jwtToken)throw new Error("Jeton de test requis.");
+ const response=await fetch(path,{...options,headers:{"Authorization":"Bearer "+jwtToken,"Content-Type":"application/json",...(options.headers||{})},cache:"no-store"});
+ if(!response.ok)throw new Error(response.status===401?"Jeton invalide ou expiré.":response.status===404?"Dossier introuvable ou inaccessible.":"La requête a échoué ("+response.status+").");
+ return response.json();
+}
+function buildEditor(catalogue,id){
+ const root=el("editor");clear(root);
+ if(catalogue.catalogue_status!=="configured"){
+   paragraph(root,"Le référentiel métier de cette méthodologie n'est pas encore renseigné.");
+   return;
+ }
+ const supported=new Set(["text","number","boolean","date"]);
+ const seen=new Set();
+ const variables=[];
+ catalogue.dimensions.forEach(d=>d.indicators.forEach(i=>i.variables.forEach(v=>{
+   if(!seen.has(v.code)){seen.add(v.code);variables.push({...v,dimension:d.label})}
+ })));
+ if(!variables.length){paragraph(root,"Aucune variable saisissable n'est enregistrée.");return}
+ const heading=document.createElement("h3");heading.textContent="Saisir une observation";root.append(heading);
+ if(selectedStatus!=="draft"){
+   paragraph(root,"Ce dossier n'est pas un brouillon. L'ajout d'observations est désactivé.");return
+ }
+ const form=document.createElement("form");form.autocomplete="off";
+ const variableLabel=document.createElement("label");variableLabel.textContent="Variable du référentiel";variableLabel.htmlFor="variable-input";form.append(variableLabel);
+ const selector=document.createElement("select");selector.id="variable-input";selector.required=true;
+ variables.forEach(v=>{
+   const option=document.createElement("option");
+   option.value=v.code;
+   option.textContent=v.dimension+" — "+v.label+(v.critical?" (critique)":"")+(supported.has(v.value_type)?"":" (saisie non disponible)");
+   option.disabled=!supported.has(v.value_type);
+   selector.append(option)
+ });
+ form.append(selector);
+ const statusLabel=document.createElement("label");statusLabel.textContent="État de la donnée";statusLabel.htmlFor="data-status";form.append(statusLabel);
+ const status=document.createElement("select");status.id="data-status";
+ [["available","Disponible"],["missing","Manquante"],["refused","Non communiquée"],["temporarily_unavailable","Temporairement indisponible"],["under_verification","En cours de vérification"]].forEach(([value,label])=>{
+   const option=document.createElement("option");option.value=value;option.textContent=label;status.append(option)
+ });form.append(status);
+ const valueLabel=document.createElement("label");valueLabel.textContent="Valeur";valueLabel.htmlFor="observation-value";form.append(valueLabel);
+ const valueBox=document.createElement("div");form.append(valueBox);
+ function makeValueControl(){
+   clear(valueBox);
+   const variable=variables.find(v=>v.code===selector.value);
+   if(!variable){return}
+   if(variable.value_type==="boolean"){
+     const input=document.createElement("select");input.id="observation-value";
+     [["","Sélectionner"],["true","Oui"],["false","Non"]].forEach(([v,t])=>{const opt=document.createElement("option");opt.value=v;opt.textContent=t;input.append(opt)});
+     valueBox.append(input)
+   }else{
+     const input=document.createElement("input");input.id="observation-value";
+     input.type=variable.value_type==="number"?"number":variable.value_type==="date"?"date":"text";
+     if(variable.value_type==="number")input.step="any";
+     input.maxLength=2000;
+     valueBox.append(input)
+   }
+   valueBox.querySelector("#observation-value").required=status.value==="available";
+   valueBox.querySelector("#observation-value").disabled=status.value!=="available";
+ }
+ selector.addEventListener("change",makeValueControl);
+ status.addEventListener("change",()=>{
+   const input=valueBox.querySelector("#observation-value");
+   if(input){input.disabled=status.value!=="available";input.required=status.value==="available"}
+ });
+ makeValueControl();
+ const sourceLabel=document.createElement("label");sourceLabel.textContent="Type de source (facultatif)";sourceLabel.htmlFor="observation-source";form.append(sourceLabel);
+ const source=document.createElement("input");source.id="observation-source";source.maxLength=100;source.placeholder="Ex. : auto-déclaration";form.append(source);
+ const submit=document.createElement("button");submit.type="submit";submit.textContent="Enregistrer l'observation";form.append(submit);
+ const help=document.createElement("p");help.className="small";help.textContent="Les variables de type enum et json nécessitent une configuration métier avant saisie. Toute correction ultérieure doit créer une nouvelle observation liée à l'ancienne.";form.append(help);
+ form.addEventListener("submit",async event=>{
+   event.preventDefault();
+   if(id!==selectedDossier)return;
+   if(!form.reportValidity())return;
+   const variable=variables.find(v=>v.code===selector.value);
+   if(!variable||!supported.has(variable.value_type))return notice("Type de variable non pris en charge.",true);
+   const input=valueBox.querySelector("#observation-value");
+   let value=null;
+   if(status.value==="available"){
+     const raw=input.value;
+     if(raw==="")return notice("Saisir une valeur.",true);
+     if(variable.value_type==="number"){value=Number(raw);if(!Number.isFinite(value))return notice("Nombre invalide.",true)}
+     else if(variable.value_type==="boolean")value=raw==="true";
+     else value=raw;
+   }
+   const payload={variable_code:variable.code,data_status:status.value,value,source_type:source.value.trim()||null};
+   submit.disabled=true;
+   try{
+     await request("/api/v1/pass/dossiers/"+encodeURIComponent(id)+"/observations",{method:"POST",body:JSON.stringify(payload)});
+     if(id===selectedDossier){notice("Observation enregistrée.");await selectDossier(id)}
+   }catch(e){notice(e.message,true)}
+   finally{submit.disabled=false}
+ });
+ root.append(form);
+}
+async function downloadReport(){
+ if(!selectedDossier||!jwtToken)return notice("Sélectionner un dossier.",true);
+ const button=el("pdf-report");button.disabled=true;
+ try{
+   const response=await fetch("/api/v1/pass/dossiers/"+encodeURIComponent(selectedDossier)+"/report.pdf",{
+     headers:{"Authorization":"Bearer "+jwtToken},cache:"no-store"
+   });
+   if(!response.ok)throw new Error(response.status===404?"Dossier inaccessible.":"Rapport indisponible ("+response.status+").");
+   const blob=await response.blob();
+   if(blob.type!=="application/pdf")throw new Error("Format de rapport inattendu.");
+   const url=URL.createObjectURL(blob);
+   const link=document.createElement("a");link.href=url;link.download="gulgo-pass-descriptif-demo.pdf";
+   document.body.append(link);link.click();link.remove();
+   setTimeout(()=>URL.revokeObjectURL(url),1000);
+   notice("Rapport descriptif généré. Aucune évaluation officielle n'est réalisée.");
+ }catch(e){notice(e.message,true)}
+ finally{button.disabled=!selectedDossier}
+}
+el("pdf-report").addEventListener("click",downloadReport);
+async function loadCatalogue(id){
+ const cards=[...document.querySelectorAll(".dimension")];
+ cards.forEach(card=>card.querySelector("span").textContent="Chargement du référentiel...");
+ try {
+   const result=await request("/api/v1/pass/dossiers/"+encodeURIComponent(id)+"/catalog");
+   if(id!==selectedDossier)return;
+   buildEditor(result,id);
+   const byCode=new Map(result.dimensions.map(d=>[d.code,d]));
+   cards.forEach(card=>{
+     const dimension=byCode.get(card.dataset.code);
+     const slot=card.querySelector("span");
+     if(!dimension || !dimension.indicators.length){
+       slot.textContent="Aucun indicateur enregistré pour cette dimension.";
+       return;
+     }
+     const count=dimension.indicators.reduce((n,i)=>n+i.variables.length,0);
+     slot.textContent=dimension.indicators.length+" indicateur(s) ; "+count+" variable(s) enregistrée(s).";
+   });
+ }catch(e){
+   cards.forEach(card=>card.querySelector("span").textContent="Référentiel indisponible.");
+   notice(e.message,true);
+ }
+}
+async function selectDossier(id){
+ const epoch=++requestEpoch;
+ selectedDossier=id;selectedStatus=null;
+ el("pdf-report").disabled=true;
+ clear(el("selected"));clear(el("observations"));clear(el("editor"));
+ paragraph(el("selected"),"Dossier : "+id);
+ try {
+   const dossier=await request("/api/v1/pass/dossiers/"+encodeURIComponent(id));
+   if(epoch!==requestEpoch)return;
+   selectedStatus=dossier.status;
+   el("pdf-report").disabled=false;
+   await loadCatalogue(id);
+   if(epoch!==requestEpoch)return;
+   
+   const result=await request("/api/v1/pass/dossiers/"+encodeURIComponent(id)+"/observations");
+   if(epoch!==requestEpoch)return;
+   const observations=result.observations||[];
+   if(!observations.length)paragraph(el("observations"),"Ce dossier ne contient pas encore d'observations.");
+   observations.forEach(item=>{
+     const card=document.createElement("div");card.className="item";
+     const title=document.createElement("strong");title.textContent=item.variable_code+" · "+item.data_status;card.append(title);
+     paragraph(card,"Valeur : "+(item.value===null?"Non renseignée":JSON.stringify(item.value)));
+     paragraph(card,"Source : "+(item.source_type||"Non précisée"));
+     if(item.supersedes_id)paragraph(card,"Corrige l'observation : "+item.supersedes_id);
+     el("observations").append(card);
+   });
+   notice("Historique chargé. Aucun score n'est calculé.");
+ } catch(e){notice(e.message,true);paragraph(el("observations"),"Impossible d'afficher cet historique.")}
+}
+async function load(){
+ jwtToken=el("token").value.trim();el("token").value="";
+ selectedDossier=null;selectedStatus=null;requestEpoch++;el("pdf-report").disabled=true;clear(el("editor"));clear(el("dossiers"));clear(el("observations"));clear(el("selected"));
+ document.querySelectorAll(".dimension span").forEach(node=>node.textContent="Sélectionnez un dossier pour charger le référentiel.");
+ try{
+   const [subjects,dossiers]=await Promise.all([request("/api/v1/subjects"),request("/api/v1/pass/dossiers")]);
+   const sel=el("subject");sel.replaceChildren();const blank=document.createElement("option");blank.value="";blank.textContent="Sélectionner une activité";sel.append(blank);
+   subjects.forEach(s=>{const o=document.createElement("option");o.value=s.id;o.textContent=s.display_name+" ("+s.kind+")";sel.append(o)});
+   el("create").disabled=subjects.length===0;
+   if(!dossiers.length)paragraph(el("dossiers"),"Aucun dossier accessible.");
+   dossiers.forEach(d=>{const b=document.createElement("button");b.textContent=d.status+" · "+d.id;b.addEventListener("click",()=>selectDossier(d.id));el("dossiers").append(b)});
+   notice(subjects.length+" activité(s) et "+dossiers.length+" dossier(s) accessibles.");
+   paragraph(el("selected"),"Sélectionnez un dossier dans la colonne de gauche.");
+ }catch(e){notice(e.message,true);jwtToken="";el("create").disabled=true}
+}
+el("load").addEventListener("click",load);
+el("disconnect").addEventListener("click",()=>{jwtToken="";selectedDossier=null;selectedStatus=null;requestEpoch++;clear(el("editor"));el("token").value="";["dossiers","observations","selected"].forEach(id=>clear(el(id)));el("subject").replaceChildren();el("create").disabled=true;document.querySelectorAll(".dimension span").forEach(node=>node.textContent="Accès effacé.");notice("Jeton effacé de la mémoire de cette page.")});
+el("create").addEventListener("click",async()=>{
+ if(!el("subject").value)return notice("Sélectionnez une activité.",true);
+ try{
+   const created=await request("/api/v1/pass/dossiers",{method:"POST",body:JSON.stringify({subject_id:el("subject").value})});
+   notice("Dossier créé : "+created.id);
+   await loadAfterCreate(created.id);
+ }catch(e){notice(e.message,true)}
+});
+async function loadAfterCreate(id){
+ const dossiers=await request("/api/v1/pass/dossiers");
+ clear(el("dossiers"));
+ dossiers.forEach(d=>{const b=document.createElement("button");b.textContent=d.status+" · "+d.id;b.addEventListener("click",()=>selectDossier(d.id));el("dossiers").append(b)});
+ await selectDossier(id);
+}
+</script>
+</body>
+</html>
