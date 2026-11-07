@@ -3,7 +3,7 @@
 \set ON_ERROR_STOP on
 BEGIN;
 INSERT INTO public.gulgo_identity_secret(id,secret)
-VALUES(TRUE, decode(repeat('ab',32),'hex'));
+VALUES(TRUE, decode(repeat('ab',32),'hex')) ON CONFLICT (id) DO NOTHING;
 INSERT INTO app_user(id,external_auth_id) VALUES
  ('31313131-3131-4131-8131-313131313131','signed-test-a'),
  ('32323232-3232-4232-8232-323232323232','signed-test-b');
