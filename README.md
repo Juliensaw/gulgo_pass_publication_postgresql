@@ -36,3 +36,23 @@ incomplets, notamment le risque d'usurpation de l'identité par GUC depuis
 une connexion SQL arbitraire. Voir `SECURITY_IDENTITY_DECISION_V11.md`
 et `MVP_DELIVERY_PLAN_V11.md`. Aucun traitement de données personnelles
 ou économiques réelles n'est autorisé dans le démonstrateur.
+
+## Page institutionnelle GULGO — prototype
+
+L'API sert aussi une première page d'accueil institutionnelle sur `GET /`.
+Elle présente les publics prioritaires (indépendants, TPE, PME), les offres
+PASS / TRUST / STRATEGY / DIASPORA / MARKET et le parcours envisagé.
+
+L'action principale « Découvrir la pré-évaluation » renvoie à une section
+informative, **pas à un outil de pré-évaluation opérationnel**. Aucun score,
+décision d'admissibilité, formulaire de contact ou collecte de données n'est
+implémenté sur cette page. Les services non encore opérationnels sont indiqués
+comme tels.
+
+Pour la tester localement, démarrer FastAPI comme indiqué plus haut et ouvrir
+`http://127.0.0.1:8000/`. Ce prototype n'est pas un site public déployé
+et ne doit pas être considéré comme une validation commerciale.
+
+Étapes de travail suivantes : validation du contenu institutionnel, création
+de la pré-évaluation selon les règles métier approuvées, puis mise en place
+d'une navigation et d'une authentification utilisables vers l'application PASS.
