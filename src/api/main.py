@@ -1,5 +1,7 @@
 """GULGO PASS pilot API: controlled dossier writes; scoring disabled."""
 import os
+from pathlib import Path
+from fastapi.responses import HTMLResponse
 from datetime import datetime, timezone
 from uuid import UUID
 import jwt
@@ -77,6 +79,22 @@ def query_as_actor(actor: UUID, sql: str, args: tuple=()):
     except psycopg.Error as exc:
         # Do not expose SQL or connection information to callers.
         raise HTTPException(503, "Database operation failed") from exc
+
+@app.get("/demo/pass", response_class=HTMLResponse, include_in_schema=False)
+def pass_demo():
+    """Non-production demonstration UI, served from the API's own origin."""
+    page = Path(__file__).with_name("pass_demo.html")
+    return HTMLResponse(page.read_text(encoding="utf-8"), headers={
+        "Cache-Control": "no-store",
+        "Content-Security-Policy": (
+            "default-src 'none'; script-src 'unsafe-inline'; "
+            "style-src 'unsafe-inline'; connect-src 'self'; "
+            "img-src 'self'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'"
+        ),
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "no-referrer",
+    })
+
 
 @app.get("/health")
 def health():
