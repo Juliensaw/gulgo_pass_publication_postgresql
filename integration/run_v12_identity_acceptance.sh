@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+# V1.2 security acceptance: run ONLY against disposable gulgo_test database.
+# Tests MUST succeed after the fix. They are expected to fail on V1.1.
+set -eu
+: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD for disposable database}"
+for test in integration/019_identity_spoofing_must_fail_v12.sql integration/020_identity_spoofed_write_must_fail_v12.sql; do
+  printf '\nRunning %s\n' "$test"
+  docker compose exec -T -e PGPASSWORD="$POSTGRES_PASSWORD" postgres \
+    psql -X -v ON_ERROR_STOP=1 -U gulgo_owner -d gulgo_test < "$test"
+done
+printf '\nV1.2 identity security acceptance tests passed.\n'
