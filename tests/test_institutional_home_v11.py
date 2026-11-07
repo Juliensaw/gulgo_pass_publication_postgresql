@@ -13,17 +13,17 @@ def test_homepage_prioritizes_entrepreneurs_and_pre_evaluation():
     for text in (
         "GULGO", "La confiance devient un actif.",
         "Travailleurs indépendants", "TPE et PME",
-        "Découvrir la pré-évaluation", "Pré-évaluation en préparation",
+        "Préparer ma pré-évaluation", "La pré-évaluation officielle reste en préparation.",
         "PASS", "TRUST", "STRATEGY", "DIASPORA", "MARKET",
     ):
         assert text in page
-    assert 'href="#preevaluation"' in page
+    assert 'href="/demo/pre-evaluation"' in page
 
 
 def test_homepage_does_not_falsely_offer_scoring_or_collect_data():
     page = client.get("/").text
-    assert "Aucun score ou avis d'admissibilité" in page
-    assert "Aucun questionnaire décisionnel" in page
+    assert "aucune décision de compatibilité" in page
+    assert "aucun score de crédibilité" in page
     assert "<form" not in page
     assert "<script" not in page
     assert "api/v1/" not in page
