@@ -1,7 +1,7 @@
 """GULGO PASS pilot API: controlled dossier writes; scoring disabled."""
 import os
 from pathlib import Path
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from datetime import datetime, timezone
 from uuid import UUID
 import jwt
@@ -249,6 +249,22 @@ def dossier_catalog(dossier_id: UUID, principal: Principal = Depends(verify_toke
         "dimensions": dimensions, "scoring_enabled": False,
         "catalogue_status": "configured" if rows else "not_configured",
     }
+
+
+@app.get("/api/v1/pass/dossiers/{dossier_id}/report.pdf",
+         response_class=Response)
+def descriptive_report_pdf(dossier_id: UUID, principal: Principal = Depends(verify_token)):
+    """Download a non-certified descriptive PDF; user scoping precedes generation."""
+    from src.api.pass_report import generate_descriptive_report
+    details = dossier(dossier_id, principal)
+    catalogue = dossier_catalog(dossier_id, principal)
+    history = dossier_observations(dossier_id, principal)
+    pdf = generate_descriptive_report(details, catalogue, history)
+    return Response(pdf, media_type="application/pdf", headers={
+        "Content-Disposition": 'attachment; filename="gulgo-pass-descriptif.pdf"',
+        "Cache-Control": "no-store, private",
+        "X-Content-Type-Options": "nosniff",
+    })
 
 
 class CreateDossier(BaseModel):
