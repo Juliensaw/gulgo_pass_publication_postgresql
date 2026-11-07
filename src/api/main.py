@@ -104,8 +104,12 @@ def query_as_actor(actor: UUID, sql: str, args: tuple=()):
                     if len(identity_secret) < 64 or len(identity_secret) % 2:
                         raise HTTPException(503, "Actor identity signing not configured")
                     # Must match the bytes provisioned in gulgo_identity_secret.
+                    try:
+                        signing_key = bytes.fromhex(identity_secret)
+                    except ValueError as exc:
+                        raise HTTPException(503, "Actor identity signing not configured") from exc
                     actor_mac = hmac.new(
-                        bytes.fromhex(identity_secret),
+                        signing_key,
                         ("gulgo-actor-v12:" + str(actor)).encode("utf-8"),
                         hashlib.sha256,
                     ).hexdigest()
