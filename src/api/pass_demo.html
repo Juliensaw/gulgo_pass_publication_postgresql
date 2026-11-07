@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>GULGO PASS — Démonstrateur</title>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#172a3a;background:#f5f7fa}
+*{box-sizing:border-box}body{margin:0}header{padding:22px max(24px,calc((100vw - 1140px)/2));background:#102d48;color:#fff}
+header h1{margin:0;font-size:1.5rem}header p{margin:7px 0 0;color:#dce8f4}
+main{max-width:1140px;margin:26px auto;padding:0 20px}
+.warning{padding:12px 16px;background:#fff3e4;border-left:4px solid #c57b23;margin-bottom:18px}
+.grid{display:grid;grid-template-columns:280px 1fr;gap:18px}
+section,aside{background:white;border:1px solid #d9e2ea;border-radius:12px;padding:20px;min-width:0}
+h2{font-size:1.1rem;margin:0 0 16px}h3{font-size:1rem;margin:18px 0 8px}
+label{display:block;font-weight:600;margin:12px 0 6px;font-size:.91rem}
+input,select,button{font:inherit;border-radius:8px}
+input,select{width:100%;padding:10px;border:1px solid #9cabb9;background:white}
+button{border:0;padding:10px 13px;background:#174d75;color:white;cursor:pointer}
+button.secondary{background:#e8eef4;color:#18374c}
+button:disabled{opacity:.55;cursor:not-allowed}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+.small{font-size:.85rem;color:#526477}
+ol{padding-left:20px;line-height:1.8}
+.list{display:grid;gap:8px}
+.list button{text-align:left;background:#edf3f8;color:#122f45;width:100%;overflow-wrap:anywhere}
+.list button[aria-current=true]{background:#c6e2f0;outline:2px solid #31698c}
+.dimensions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:16px 0}
+.dimension{padding:12px;border:1px solid #dae4eb;border-radius:8px;background:#f8fafb}
+.dimension b{display:block;font-size:.87rem}.dimension span{font-size:.8rem;color:#586c7c}
+.item{padding:12px;border:1px solid #e3e9ed;border-radius:8px;margin:9px 0;overflow-wrap:anywhere}
+.item code{white-space:pre-wrap}#message{min-height:24px;font-weight:600}#message.error{color:#a12727}
+details{margin:14px 0}summary{cursor:pointer;font-weight:600}
+@media(max-width:760px){.grid{grid-template-columns:1fr}.dimensions{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><h1>GULGO PASS</h1><p>Espace dossier — démonstrateur technique V1.1</p></header>
+<main>
+<div class="warning"><strong>Environnement de démonstration uniquement.</strong> Utiliser exclusivement des comptes et données fictifs. L'identité SQL et l'exploitation restent à sécuriser avant une ouverture réelle.</div>
+<div class="grid">
+<aside>
+<h2>Accès temporaire</h2>
+<p class="small">La connexion et la création des comptes ne sont pas encore intégrées. Saisissez uniquement un jeton JWT de test émis pour cet environnement. Le jeton reste en mémoire et n'est pas stocké dans le navigateur.</p>
+<label for="token">Jeton de test</label><input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="JWT fictif" aria-label="Jeton de test">
+<div class="actions"><button id="load">Charger mes dossiers</button><button id="disconnect" class="secondary">Effacer l'accès</button></div>
+<h2>Dossiers accessibles</h2><div id="dossiers" class="list"><p class="small">Aucun dossier chargé.</p></div>
+</aside>
+<section>
+<h2>Constitution du dossier PASS</h2>
+<p id="message" role="status" aria-live="polite"></p>
+<details>
+<summary>Créer un dossier pour une activité déjà enregistrée</summary>
+<label for="subject">Activité économique</label><select id="subject"><option value="">Charger les activités d'abord</option></select>
+<div class="actions"><button id="create" disabled>Créer un dossier brouillon</button></div>
+<p class="small">La création d'une activité n'est pas encore disponible dans cet écran.</p>
+</details>
+<div id="selected"><p class="small">Sélectionnez un dossier pour consulter son historique.</p></div>
+<h3>Les six dimensions PASS</h3>
+<div class="dimensions">
+<div class="dimension"><b>D1 · Identité et existence</b><span>Formulaire métier à connecter</span></div>
+<div class="dimension"><b>D2 · Traçabilité et qualité des données</b><span>Formulaire métier à connecter</span></div>
+<div class="dimension"><b>D3 · Activité et régularité économique</b><span>Formulaire métier à connecter</span></div>
+<div class="dimension"><b>D4 · Discipline et engagements</b><span>Formulaire métier à connecter</span></div>
+<div class="dimension"><b>D5 · Performance et résilience</b><span>Formulaire métier à connecter</span></div>
+<div class="dimension"><b>D6 · Formalisation et gouvernance</b><span>Formulaire métier à connecter</span></div>
+</div>
+<p class="small">Les observations ne sont pas attribuées artificiellement aux dimensions : cette association nécessite le catalogue validé des variables et indicateurs.</p>
+<h3>Historique des observations</h3><div id="observations"><p class="small">Aucun dossier sélectionné.</p></div>
+</section>
+</div>
+</main>
+<script>
+"use strict";
+const el=id=>document.getElementById(id);
+let jwtToken="",selectedDossier=null;
+function notice(message,error=false){el("message").textContent=message;el("message").className=error?"error":""}
+function clear(node){node.replaceChildren()}
+function paragraph(parent,value,cls="small"){const p=document.createElement("p");p.textContent=value;p.className=cls;parent.append(p)}
+async function request(path,options={}){
+ if(!jwtToken)throw new Error("Jeton de test requis.");
+ const response=await fetch(path,{...options,headers:{"Authorization":"Bearer "+jwtToken,"Content-Type":"application/json",...(options.headers||{})},cache:"no-store"});
+ if(!response.ok)throw new Error(response.status===401?"Jeton invalide ou expiré.":response.status===404?"Dossier introuvable ou inaccessible.":"La requête a échoué ("+response.status+").");
+ return response.json();
+}
+async function selectDossier(id){
+ selectedDossier=id;
+ clear(el("selected"));clear(el("observations"));
+ paragraph(el("selected"),"Dossier : "+id);
+ try {
+   const result=await request("/api/v1/pass/dossiers/"+encodeURIComponent(id)+"/observations");
+   const observations=result.observations||[];
+   if(!observations.length)paragraph(el("observations"),"Ce dossier ne contient pas encore d'observations.");
+   observations.forEach(item=>{
+     const card=document.createElement("div");card.className="item";
+     const title=document.createElement("strong");title.textContent=item.variable_code+" · "+item.data_status;card.append(title);
+     paragraph(card,"Valeur : "+(item.value===null?"Non renseignée":JSON.stringify(item.value)));
+     paragraph(card,"Source : "+(item.source_type||"Non précisée"));
+     if(item.supersedes_id)paragraph(card,"Corrige l'observation : "+item.supersedes_id);
+     el("observations").append(card);
+   });
+   notice("Historique chargé. Aucun score n'est calculé.");
+ } catch(e){notice(e.message,true);paragraph(el("observations"),"Impossible d'afficher cet historique.")}
+}
+async function load(){
+ jwtToken=el("token").value.trim();el("token").value="";
+ selectedDossier=null;clear(el("dossiers"));clear(el("observations"));clear(el("selected"));
+ try{
+   const [subjects,dossiers]=await Promise.all([request("/api/v1/subjects"),request("/api/v1/pass/dossiers")]);
+   const sel=el("subject");sel.replaceChildren();const blank=document.createElement("option");blank.value="";blank.textContent="Sélectionner une activité";sel.append(blank);
+   subjects.forEach(s=>{const o=document.createElement("option");o.value=s.id;o.textContent=s.display_name+" ("+s.kind+")";sel.append(o)});
+   el("create").disabled=subjects.length===0;
+   if(!dossiers.length)paragraph(el("dossiers"),"Aucun dossier accessible.");
+   dossiers.forEach(d=>{const b=document.createElement("button");b.textContent=d.status+" · "+d.id;b.addEventListener("click",()=>selectDossier(d.id));el("dossiers").append(b)});
+   notice(subjects.length+" activité(s) et "+dossiers.length+" dossier(s) accessibles.");
+   paragraph(el("selected"),"Sélectionnez un dossier dans la colonne de gauche.");
+ }catch(e){notice(e.message,true);jwtToken="";el("create").disabled=true}
+}
+el("load").addEventListener("click",load);
+el("disconnect").addEventListener("click",()=>{jwtToken="";selectedDossier=null;el("token").value="";["dossiers","observations","selected"].forEach(id=>clear(el(id)));el("subject").replaceChildren();el("create").disabled=true;notice("Jeton effacé de la mémoire de cette page.")});
+el("create").addEventListener("click",async()=>{
+ if(!el("subject").value)return notice("Sélectionnez une activité.",true);
+ try{
+   const created=await request("/api/v1/pass/dossiers",{method:"POST",body:JSON.stringify({subject_id:el("subject").value})});
+   notice("Dossier créé : "+created.id);
+   await loadAfterCreate(created.id);
+ }catch(e){notice(e.message,true)}
+});
+async function loadAfterCreate(id){
+ const dossiers=await request("/api/v1/pass/dossiers");
+ clear(el("dossiers"));
+ dossiers.forEach(d=>{const b=document.createElement("button");b.textContent=d.status+" · "+d.id;b.addEventListener("click",()=>selectDossier(d.id));el("dossiers").append(b)});
+ await selectDossier(id);
+}
+</script>
+</body>
+</html>
