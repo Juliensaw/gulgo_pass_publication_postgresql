@@ -19,12 +19,13 @@ INSERT INTO pass_dossier(id,subject_id,methodology_id) VALUES
 INSERT INTO variable_definition(methodology_id,code,label,value_type)
  VALUES('GULGO_PASS_V1_PILOT','V12-SIGNED','Synthetic signed observation','text');
 SET LOCAL ROLE gulgo_api;
+SELECT set_config('app.actor_expires',(floor(extract(epoch from clock_timestamp()))::bigint + 30)::text,true);
 SELECT set_config('app.current_user_id','31313131-3131-4131-8131-313131313131',true);
 -- Generate synthetic MAC as owner in a separate security-definer test helper,
 -- never grant direct access to the production signing secret to gulgo_api.
 -- MAC is generated from a known, synthetic key literal in this disposable test.
 SELECT set_config('app.actor_mac',
- encode(public.hmac(convert_to('gulgo-actor-v13:31313131-3131-4131-8131-313131313131:' || txid_current()::text,'UTF8'),
+ encode(public.hmac(convert_to('gulgo-actor-v131:31313131-3131-4131-8131-313131313131:' || txid_current()::text || ':' || current_setting('app.actor_expires'),'UTF8'),
  decode(repeat('ab',32),'hex'),'sha256'),'hex'),true);
 DO $$
 BEGIN
