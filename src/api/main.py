@@ -10,6 +10,8 @@ from fastapi import FastAPI, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 from datetime import date
 import json
+import hmac
+import hashlib
 
 app = FastAPI(title="GULGO PASS API", version="0.5.0")
 
@@ -98,7 +100,17 @@ def query_as_actor(actor: UUID, sql: str, args: tuple=()):
                             or role_row[4] or role_row[5] or role_row[6]
                             or not role_row[7] or any(role_row[8:14])):
                         raise HTTPException(503, "Unsafe database role configuration")
+                    identity_secret = os.environ.get("GULGO_ACTOR_HMAC_SECRET", "")
+                    if len(identity_secret) < 64 or len(identity_secret) % 2:
+                        raise HTTPException(503, "Actor identity signing not configured")
+                    # Must match the bytes provisioned in gulgo_identity_secret.
+                    actor_mac = hmac.new(
+                        bytes.fromhex(identity_secret),
+                        ("gulgo-actor-v12:" + str(actor)).encode("utf-8"),
+                        hashlib.sha256,
+                    ).hexdigest()
                     cur.execute("SELECT set_config('app.current_user_id', %s, true)", (str(actor),))
+                    cur.execute("SELECT set_config('app.actor_mac', %s, true)", (actor_mac,))
                     cur.execute(sql, args)
                     return cur.fetchall()
     except psycopg.Error as exc:
