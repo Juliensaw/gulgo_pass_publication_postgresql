@@ -9,7 +9,7 @@
 - Aucun calcul de score PASS n'est autorisé dans le MVP descriptif.
 
 ## Risques bloquants restants
-1. **Rejeu de signature :** le HMAC porte uniquement sur l'UUID utilisateur. Une signature valide capturée peut être réutilisée indéfiniment tant que la clé ne change pas. Elle n'est liée ni à une transaction ni à une expiration. Les GUC PostgreSQL sont modifiables par un client SQL. **Une fuite de signature reste une possibilité d'usurpation.**
+1. **Rejeu de signature :** depuis la migration V1.3, le HMAC porte sur l'UUID utilisateur et l'identifiant de transaction PostgreSQL. Un test CI démontre le rejet d'une signature de T1 dans T2. **Le MAC n'a toujours pas d'expiration temporelle ni de rotation de clé.** Les GUC PostgreSQL restent modifiables par un client SQL, et un attaquant capable d'agir dans une transaction authentifiée conserve une surface d'attaque. La mitigation ne constitue pas une homologation.
 2. **Gestion des clés :** il n'existe pas encore de provisionnement de production automatisé, de rotation coordonnée entre API et PostgreSQL, ni de procédure de révocation éprouvée.
 3. **Authentification :** l'API vérifie des JWT HS256 ; il faut valider la provenance et la gestion des clés JWT, les droits des émetteurs et les conditions de révocation.
 4. **Surface SQL :** une garde syntaxique sur les requêtes de l'API ne remplace ni une politique d'accès réseau stricte ni un audit SQL et des fonctions SECURITY DEFINER.
@@ -22,11 +22,11 @@
 4. Vérifier que les rôles `gulgo_runtime` et `gulgo_api` n'ont aucun droit direct sur la table de secret ; vérifier les privilèges des rôles et les accès réseau.
 5. Tester le refus en l'absence de secret, le fonctionnement d'un utilisateur autorisé et l'interdiction d'accès à un autre dossier.
 
-**Attention :** le provisionnement décrit est une procédure de préparation, **pas** une approbation de production. Ne pas déployer le HMAC statique sans remédier au risque de rejeu.
+**Attention :** le provisionnement décrit est une procédure de préparation, **pas** une approbation de production. Ne pas déployer sans validation des risques résiduels de rejeu, de gestion des clés et d'exécution SQL au sein d'une transaction authentifiée.
 
 ## Critères de GO (tous obligatoires)
-- [ ] Deux workflows CI réussis sur le commit de fusion envisagé.
-- [ ] Signatures anti-rejeu : expiration et liaison forte au contexte d'exécution, ou architecture d'identité alternative validée.
+- [x] Deux workflows CI réussis sur le commit V1.3 `315861d7` (à refaire sur le commit de fusion envisagé).
+- [ ] Signatures anti-rejeu : liaison à la transaction implémentée et testée ; expiration temporelle et stratégie contre l'exécution SQL arbitraire encore à valider.
 - [ ] Gestion des secrets : provisionnement, rotation, sauvegarde, révocation et accès audités.
 - [ ] Accès réseau PostgreSQL limité aux composants explicitement autorisés.
 - [ ] Tests d'intégration avec une vraie connexion `gulgo_runtime` et parcours API de bout en bout.
