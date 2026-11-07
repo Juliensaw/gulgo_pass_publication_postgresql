@@ -1,5 +1,6 @@
 """GULGO PASS pilot API: controlled dossier writes; scoring disabled."""
 import os
+import re
 from pathlib import Path
 from fastapi.responses import HTMLResponse, Response
 from datetime import datetime, timezone
@@ -32,8 +33,23 @@ def verify_token(authorization: str | None = Header(default=None)) -> Principal:
         raise HTTPException(401, "Invalid or expired token")
 
 
+def validate_api_sql(sql: str) -> None:
+    """Defense in depth: only one static SELECT statement per API call.
+
+    This is not an SQL parser or a fix for direct database access/GUC spoofing.
+    SQL must remain authored by trusted developers; values use bind parameters.
+    """
+    statement = sql.strip()
+    if (not re.match(r"(?is)^SELECT\\s+", statement)
+            or re.search(r";|--|/\\*|\\*/", statement)
+            or re.search(r"(?i)\\b(?:set_config|current_setting|set|reset|copy|"
+                         r"pg_sleep|dblink|lo_import|lo_export)\\s*\\(", statement)):
+        raise HTTPException(503, "Unsafe application SQL")
+
+
 def query_as_actor(actor: UUID, sql: str, args: tuple=()):
     """Transaction-local identity; database credentials never supplied by caller."""
+    validate_api_sql(sql)
     try:
         import psycopg
     except ImportError as exc:
