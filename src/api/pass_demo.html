@@ -59,12 +59,12 @@ details{margin:14px 0}summary{cursor:pointer;font-weight:600}
 <div id="selected"><p class="small">Sélectionnez un dossier pour consulter son historique.</p></div>
 <h3>Les six dimensions PASS</h3>
 <div class="dimensions">
-<div class="dimension"><b>D1 · Identité et existence</b><span>Formulaire métier à connecter</span></div>
-<div class="dimension"><b>D2 · Traçabilité et qualité des données</b><span>Formulaire métier à connecter</span></div>
-<div class="dimension"><b>D3 · Activité et régularité économique</b><span>Formulaire métier à connecter</span></div>
-<div class="dimension"><b>D4 · Discipline et engagements</b><span>Formulaire métier à connecter</span></div>
-<div class="dimension"><b>D5 · Performance et résilience</b><span>Formulaire métier à connecter</span></div>
-<div class="dimension"><b>D6 · Formalisation et gouvernance</b><span>Formulaire métier à connecter</span></div>
+<div class="dimension" data-code="D1"><b>D1 · Identité et existence</b><span>Formulaire métier à connecter</span></div>
+<div class="dimension" data-code="D2"><b>D2 · Traçabilité et qualité des données</b><span>Formulaire métier à connecter</span></div>
+<div class="dimension" data-code="D3"><b>D3 · Activité et régularité économique</b><span>Formulaire métier à connecter</span></div>
+<div class="dimension" data-code="D4"><b>D4 · Discipline et engagements</b><span>Formulaire métier à connecter</span></div>
+<div class="dimension" data-code="D5"><b>D5 · Performance et résilience</b><span>Formulaire métier à connecter</span></div>
+<div class="dimension" data-code="D6"><b>D6 · Formalisation et gouvernance</b><span>Formulaire métier à connecter</span></div>
 </div>
 <p class="small">Les observations ne sont pas attribuées artificiellement aux dimensions : cette association nécessite le catalogue validé des variables et indicateurs.</p>
 <h3>Historique des observations</h3><div id="observations"><p class="small">Aucun dossier sélectionné.</p></div>
@@ -84,10 +84,32 @@ async function request(path,options={}){
  if(!response.ok)throw new Error(response.status===401?"Jeton invalide ou expiré.":response.status===404?"Dossier introuvable ou inaccessible.":"La requête a échoué ("+response.status+").");
  return response.json();
 }
+async function loadCatalogue(id){
+ const cards=[...document.querySelectorAll(".dimension")];
+ cards.forEach(card=>card.querySelector("span").textContent="Chargement du référentiel...");
+ try {
+   const result=await request("/api/v1/pass/dossiers/"+encodeURIComponent(id)+"/catalog");
+   const byCode=new Map(result.dimensions.map(d=>[d.code,d]));
+   cards.forEach(card=>{
+     const dimension=byCode.get(card.dataset.code);
+     const slot=card.querySelector("span");
+     if(!dimension || !dimension.indicators.length){
+       slot.textContent="Aucun indicateur enregistré pour cette dimension.";
+       return;
+     }
+     const count=dimension.indicators.reduce((n,i)=>n+i.variables.length,0);
+     slot.textContent=dimension.indicators.length+" indicateur(s) ; "+count+" variable(s) enregistrée(s).";
+   });
+ }catch(e){
+   cards.forEach(card=>card.querySelector("span").textContent="Référentiel indisponible.");
+   notice(e.message,true);
+ }
+}
 async function selectDossier(id){
  selectedDossier=id;
  clear(el("selected"));clear(el("observations"));
  paragraph(el("selected"),"Dossier : "+id);
+ await loadCatalogue(id);
  try {
    const result=await request("/api/v1/pass/dossiers/"+encodeURIComponent(id)+"/observations");
    const observations=result.observations||[];
@@ -106,6 +128,7 @@ async function selectDossier(id){
 async function load(){
  jwtToken=el("token").value.trim();el("token").value="";
  selectedDossier=null;clear(el("dossiers"));clear(el("observations"));clear(el("selected"));
+ document.querySelectorAll(".dimension span").forEach(node=>node.textContent="Sélectionnez un dossier pour charger le référentiel.");
  try{
    const [subjects,dossiers]=await Promise.all([request("/api/v1/subjects"),request("/api/v1/pass/dossiers")]);
    const sel=el("subject");sel.replaceChildren();const blank=document.createElement("option");blank.value="";blank.textContent="Sélectionner une activité";sel.append(blank);
@@ -118,7 +141,7 @@ async function load(){
  }catch(e){notice(e.message,true);jwtToken="";el("create").disabled=true}
 }
 el("load").addEventListener("click",load);
-el("disconnect").addEventListener("click",()=>{jwtToken="";selectedDossier=null;el("token").value="";["dossiers","observations","selected"].forEach(id=>clear(el(id)));el("subject").replaceChildren();el("create").disabled=true;notice("Jeton effacé de la mémoire de cette page.")});
+el("disconnect").addEventListener("click",()=>{jwtToken="";selectedDossier=null;el("token").value="";["dossiers","observations","selected"].forEach(id=>clear(el(id)));el("subject").replaceChildren();el("create").disabled=true;document.querySelectorAll(".dimension span").forEach(node=>node.textContent="Accès effacé.");notice("Jeton effacé de la mémoire de cette page.")});
 el("create").addEventListener("click",async()=>{
  if(!el("subject").value)return notice("Sélectionnez une activité.",true);
  try{
