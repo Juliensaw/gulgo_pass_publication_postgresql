@@ -117,3 +117,24 @@ est atteinte. Le PDF n'est pas archivé comme livrable approuvé.
 Le téléchargement répond avec `Cache-Control: no-store, private` et une
 disposition `attachment`. La sécurité demeure conditionnée à la résolution
 du risque SQL décrit dans `SECURITY_IDENTITY_DECISION_V11.md`.
+
+## Recette A/B sur connexions PostgreSQL réelles
+
+La recette `integration/run_postgres_tests.sh` crée, dans une base
+**jetable exclusivement**, deux utilisateurs fictifs A et B, leurs activités
+et leurs dossiers. Elle exécute ensuite `015_real_actor_a.sql`,
+`016_real_actor_b.sql` et `017_real_actor_a_verify.sql` dans **trois
+connexions distinctes** authentifiées directement comme `gulgo_runtime`.
+
+Les contrôles portent sur les lectures RLS, les écritures autorisées, le
+refus des écritures inter-dossiers et la persistance des observations d'une
+session à l'autre. Les données de fixture sont supprimées en même temps que
+le volume PostgreSQL jetable de la recette.
+
+**Portée exacte :** les deux identités A/B sont simulées par la GUC SQL après
+connexion au rôle technique commun. Ce test ne constitue ni une connexion
+end-to-end de deux utilisateurs web avec JWT différents ni une preuve que la
+GUC est impossible à falsifier. Le test
+`integration/011_guc_spoofing_demonstration.sql` continue de démontrer
+le risque de falsification sous accès SQL arbitraire. Celui-ci reste
+**bloquant pour une mise en production réelle**.
