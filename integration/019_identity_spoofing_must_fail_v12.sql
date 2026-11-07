@@ -19,8 +19,9 @@ INSERT INTO pass_dossier(id,subject_id,methodology_id) VALUES
  ('d4d4d4d4-d4d4-44d4-84d4-d4d4d4d4d4d4','b2b2b2b2-b2b2-42b2-82b2-b2b2b2b2b2b2','GULGO_PASS_V1_PILOT');
 SET LOCAL ROLE gulgo_api;
 SELECT set_config('app.actor_expires',(floor(extract(epoch from clock_timestamp()))::bigint + 30)::text,true);
+SELECT set_config('app.actor_key_id','primary',true);
 SELECT set_config('app.current_user_id','71717171-7171-4171-8171-717171717171',true);
-SELECT set_config('app.actor_mac',encode(public.hmac(convert_to('gulgo-actor-v131:71717171-7171-4171-8171-717171717171:' || txid_current()::text || ':' || current_setting('app.actor_expires'),'UTF8'),decode(repeat('ab',32),'hex'),'sha256'),'hex'),true);
+SELECT set_config('app.actor_mac',encode(public.hmac(convert_to('gulgo-actor-v132:primary:71717171-7171-4171-8171-717171717171:' || txid_current()::text || ':' || current_setting('app.actor_expires'),'UTF8'),decode(repeat('ab',32),'hex'),'sha256'),'hex'),true);
 DO $$
 BEGIN
  IF public.gulgo_actor_id() IS DISTINCT FROM '71717171-7171-4171-8171-717171717171'::uuid
