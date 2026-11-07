@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>GULGO — Préparer ma pré-évaluation</title>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#f5f7fa;color:#173049}
+*{box-sizing:border-box}body{margin:0}
+header{background:#112f4d;color:white;padding:24px max(20px,calc((100vw - 900px)/2))}
+header a{color:#f3b17b}h1{font-size:clamp(1.65rem,4vw,2.5rem);margin:10px 0}
+main{max-width:900px;margin:24px auto;padding:0 20px 55px}
+.card{background:white;border:1px solid #dbe5ed;border-radius:13px;padding:25px;margin-bottom:17px}
+h2{font-size:1.25rem}p{line-height:1.7}
+.notice{border-left:4px solid #c37a35;padding:15px;background:#fff2e5;margin:18px 0}
+fieldset{border:1px solid #d8e2eb;border-radius:9px;margin:18px 0;padding:18px}
+legend{font-weight:700;padding:0 6px}
+.hint{color:#526678;font-size:.93rem}
+.options{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px}
+label{display:flex;align-items:center;gap:6px;cursor:pointer}
+input{accent-color:#174f75}
+button{background:#174f75;color:white;font:inherit;padding:12px 18px;border:0;border-radius:8px;cursor:pointer}
+button.secondary{background:#e5edf3;color:#17405e;margin-left:8px}
+button:focus-visible,input:focus-visible{outline:3px solid #d88339;outline-offset:3px}
+#result{border:1px solid #bed5e5;background:#edf5fa;border-radius:10px;padding:20px;margin-top:20px}
+#result[hidden]{display:none}
+#result ul{line-height:1.9}
+footer{padding:24px;text-align:center;color:#5b6e7d;font-size:.85rem}
+</style>
+</head>
+<body>
+<header><a href="/">← Accueil GULGO</a><h1>Préparer ma pré-évaluation</h1><p>Un premier repérage des informations à réunir pour constituer un dossier GULGO.</p></header>
+<main>
+<div class="notice"><strong>Outil d'orientation — pas une décision d'admissibilité.</strong> Ce questionnaire ne délivre aucun score PASS, aucune garantie et aucun accès au financement. Les règles officielles de pré-évaluation restent à valider.</div>
+<div class="card">
+<h2>Auto-diagnostic de préparation</h2>
+<p>Répondez sans fournir de nom, numéro d'identification, coordonnées ou documents. Seules vos réponses générales sont utilisées, localement dans cette page, pour afficher une liste de préparation. Aucune réponse n'est envoyée au serveur.</p>
+<form id="orientation" autocomplete="off">
+<fieldset><legend>1. Votre activité existe-t-elle déjà ?</legend><p class="hint">Il peut s'agir d'une activité indépendante ou d'une entreprise, y compris non formalisée.</p><div class="options"><label><input type="radio" name="activity" value="yes" required> Oui</label><label><input type="radio" name="activity" value="no"> Non</label><label><input type="radio" name="activity" value="unsure"> Je ne sais pas</label></div></fieldset>
+<fieldset><legend>2. Pouvez-vous décrire les biens ou services proposés ?</legend><p class="hint">Une description générale suffit ; ne mentionnez aucun client ou partenaire identifiable.</p><div class="options"><label><input type="radio" name="description" value="yes" required> Oui</label><label><input type="radio" name="description" value="no"> Non</label><label><input type="radio" name="description" value="unsure"> À préciser</label></div></fieldset>
+<fieldset><legend>3. Disposez-vous d'informations permettant de retracer votre activité ?</legend><p class="hint">Par exemple des dates d'activité, des relevés agrégés ou des pièces justificatives. Ne téléversez aucun document.</p><div class="options"><label><input type="radio" name="trace" value="yes" required> Oui</label><label><input type="radio" name="trace" value="no"> Non</label><label><input type="radio" name="trace" value="unsure"> Partiellement / incertain</label></div></fieldset>
+<fieldset><legend>4. Êtes-vous prêt à faire vérifier les informations que vous communiquerez ?</legend><p class="hint">L'éventuel dossier ultérieur nécessitera des règles d'accès et de confidentialité clairement définies.</p><div class="options"><label><input type="radio" name="verification" value="yes" required> Oui</label><label><input type="radio" name="verification" value="no"> Non</label><label><input type="radio" name="verification" value="unsure"> Je souhaite comprendre les modalités</label></div></fieldset>
+<div><button type="submit">Voir ma liste de préparation</button><button class="secondary" type="reset">Recommencer</button></div>
+</form>
+<div id="result" role="status" aria-live="polite" hidden><h2>Votre liste de préparation</h2><p id="result-summary"></p><ul id="result-list"></ul><p><strong>Aucune catégorie de compatibilité n'a été attribuée.</strong> Une pré-évaluation officielle exige des critères métier et des procédures de vérification validés.</p></div>
+</div>
+<div class="card"><h2>Et ensuite ?</h2><p>Le futur parcours GULGO devra distinguer les décisions « Compatible », « Partiellement compatible » et « Non compatible » selon un référentiel opérationnel approuvé. Cette page ne constitue ni une inscription ni une demande d'adhésion.</p><p>Les dossiers PASS sont actuellement accessibles uniquement via un démonstrateur technique à données fictives.</p></div>
+</main>
+<footer>GULGO — LA CONFIANCE DEVIENT UN ACTIF. · Démonstrateur sans collecte de réponses</footer>
+<script>
+"use strict";
+const form=document.getElementById("orientation");
+const result=document.getElementById("result");
+const summary=document.getElementById("result-summary");
+const list=document.getElementById("result-list");
+const actions={
+ activity:"Préciser si l'activité est déjà exercée ou encore à l'état de projet.",
+ description:"Préparer une description claire des biens ou services et du fonctionnement de l'activité.",
+ trace:"Identifier les informations existantes permettant de retracer l'activité et les documents qui pourraient les étayer.",
+ verification:"Prendre connaissance des modalités de vérification, du consentement et des règles de confidentialité avant toute transmission."
+};
+form.addEventListener("submit",event=>{
+ event.preventDefault();
+ if(!form.reportValidity())return;
+ const data=new FormData(form);
+ const missing=Object.keys(actions).filter(key=>data.get(key)!=="yes");
+ list.replaceChildren();
+ missing.forEach(key=>{const li=document.createElement("li");li.textContent=actions[key];list.append(li)});
+ summary.textContent=missing.length===0
+  ?"Vous avez indiqué pouvoir décrire votre activité et disposer d'informations à présenter. Ces réponses ne prouvent ni leur exactitude ni une éventuelle admissibilité."
+  :"Voici les éléments que vous pouvez préparer ou clarifier avant une future pré-évaluation.";
+ if(missing.length===0){const li=document.createElement("li");li.textContent="Conserver vos informations à jour et attendre la publication du processus de vérification officiel.";list.append(li)}
+ result.hidden=false;result.scrollIntoView({behavior:"smooth",block:"start"});
+});
+form.addEventListener("reset",()=>{result.hidden=true;list.replaceChildren();summary.textContent=""});
+</script>
+</body></html>
