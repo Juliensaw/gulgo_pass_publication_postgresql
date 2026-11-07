@@ -14,7 +14,7 @@ INSERT INTO variable_definition(methodology_id,code,label,value_type) VALUES
  ('GULGO_PASS_V1_PILOT','ECO-002','Montant','number');
 SET LOCAL ROLE gulgo_api;
 SELECT set_config('app.current_user_id','11111111-1111-4111-8111-111111111111',true);
-SELECT set_config('app.actor_mac',encode(public.hmac(convert_to('gulgo-actor-v12:11111111-1111-4111-8111-111111111111','UTF8'),decode(repeat('ab',32),'hex'),'sha256'),'hex'),true);
+SELECT set_config('app.actor_mac',encode(public.hmac(convert_to('gulgo-actor-v13:11111111-1111-4111-8111-111111111111:' || txid_current()::text,'UTF8'),decode(repeat('ab',32),'hex'),'sha256'),'hex'),true);
 DO $$
 DECLARE v_dossier uuid; v_observation uuid; v_audit int;
 BEGIN
@@ -36,7 +36,7 @@ BEGIN
  END;
 END $$;
 SELECT set_config('app.current_user_id','22222222-2222-4222-8222-222222222222',true);
-SELECT set_config('app.actor_mac',encode(public.hmac(convert_to('gulgo-actor-v12:22222222-2222-4222-8222-222222222222','UTF8'),decode(repeat('ab',32),'hex'),'sha256'),'hex'),true);
+SELECT set_config('app.actor_mac',encode(public.hmac(convert_to('gulgo-actor-v13:22222222-2222-4222-8222-222222222222:' || txid_current()::text,'UTF8'),decode(repeat('ab',32),'hex'),'sha256'),'hex'),true);
 DO $$
 DECLARE v_dossier uuid;
 BEGIN
