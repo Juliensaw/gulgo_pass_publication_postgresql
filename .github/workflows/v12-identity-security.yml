@@ -1,0 +1,24 @@
+name: V1.2 identity security gate
+on:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  identity-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Provision disposable database
+        env:
+          POSTGRES_PASSWORD: ci_disposable_only_not_for_production_123
+        run: |
+          docker compose up -d --wait postgres
+      - name: Run V1.2 negative read and write tests
+        env:
+          POSTGRES_PASSWORD: ci_disposable_only_not_for_production_123
+        run: sh integration/run_v12_identity_acceptance.sh
+      - name: Stop disposable database
+        if: always()
+        env:
+          POSTGRES_PASSWORD: ci_disposable_only_not_for_production_123
+        run: docker compose down -v

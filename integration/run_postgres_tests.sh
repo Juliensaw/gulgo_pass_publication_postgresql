@@ -6,7 +6,11 @@ docker compose up -d --wait postgres
 docker compose exec -T -e PGPASSWORD="$POSTGRES_PASSWORD" postgres \
   psql -X -v ON_ERROR_STOP=1 -U gulgo_owner -d gulgo_test \
   -c "SELECT 'public.gulgo_append_observation'::regproc, 'public.gulgo_create_dossier'::regproc, 'public.variable_observation'::regclass;"
-for script in integration/004_security_assertions.sql integration/005_write_assertions.sql integration/006_hardening_assertions.sql integration/007_rls_owner_assertions.sql integration/008_runtime_role_assertions.sql integration/009_runtime_login_assertions.sql integration/011_guc_spoofing_demonstration.sql integration/018_guc_spoofed_write_demonstration.sql integration/012_definer_hardening_assertions.sql integration/013_catalog_permissions_assertions.sql; do
+# Synthetic signing key for disposable CI only. Not a production secret.
+docker compose exec -T -e PGPASSWORD="$POSTGRES_PASSWORD" postgres \
+  psql -X -v ON_ERROR_STOP=1 -U gulgo_owner -d gulgo_test \
+  -c "INSERT INTO public.gulgo_identity_secret(id,secret) VALUES(TRUE,decode(repeat('ab',32),'hex')) ON CONFLICT (id) DO NOTHING; INSERT INTO public.gulgo_actor_key(key_id,secret,enabled) VALUES('primary',decode(repeat('ab',32),'hex'),TRUE) ON CONFLICT (key_id) DO UPDATE SET secret=EXCLUDED.secret,enabled=TRUE;"
+for script in integration/004_security_assertions.sql integration/005_write_assertions.sql integration/006_hardening_assertions.sql integration/007_rls_owner_assertions.sql integration/008_runtime_role_assertions.sql integration/009_runtime_login_assertions.sql integration/019_identity_spoofing_must_fail_v12.sql integration/020_identity_spoofed_write_must_fail_v12.sql integration/021_signed_actor_positive_and_spoof_negative_v12.sql integration/023_transaction_replay_must_fail_v13.sql integration/024_expired_actor_must_fail_v131.sql integration/025_revoked_actor_key_must_fail_v132.sql integration/012_definer_hardening_assertions.sql integration/013_catalog_permissions_assertions.sql; do
   docker compose exec -T -e PGPASSWORD="$POSTGRES_PASSWORD" postgres \
     psql -X -v ON_ERROR_STOP=1 -U gulgo_owner -d gulgo_test < "$script"
 done

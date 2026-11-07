@@ -1,5 +1,6 @@
 """GULGO PASS pilot API: controlled dossier writes; scoring disabled."""
 import os
+import re
 from pathlib import Path
 from fastapi.responses import HTMLResponse, Response
 from datetime import datetime, timezone
@@ -9,6 +10,8 @@ from fastapi import FastAPI, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 from datetime import date
 import json
+import hmac
+import hashlib
 
 app = FastAPI(title="GULGO PASS API", version="0.5.0")
 
@@ -32,8 +35,22 @@ def verify_token(authorization: str | None = Header(default=None)) -> Principal:
         raise HTTPException(401, "Invalid or expired token")
 
 
+def validate_api_sql(sql: str) -> None:
+    """Defense in depth: accept only one developer-authored SELECT statement.
+
+    This is not a SQL parser or a fix for direct SQL access/GUC spoofing.
+    """
+    statement = sql.strip()
+    if (not re.match(r"(?is)^SELECT\s+", statement)
+            or re.search(r";|--|/\*|\*/", statement)
+            or re.search(r"(?i)\b(?:set_config|current_setting|set|reset|copy|"
+                         r"pg_sleep|dblink|lo_import|lo_export)\s*\(", statement)):
+        raise HTTPException(503, "Unsafe application SQL")
+
+
 def query_as_actor(actor: UUID, sql: str, args: tuple=()):
     """Transaction-local identity; database credentials never supplied by caller."""
+    validate_api_sql(sql)
     try:
         import psycopg
     except ImportError as exc:
@@ -83,7 +100,30 @@ def query_as_actor(actor: UUID, sql: str, args: tuple=()):
                             or role_row[4] or role_row[5] or role_row[6]
                             or not role_row[7] or any(role_row[8:14])):
                         raise HTTPException(503, "Unsafe database role configuration")
+                    identity_secret = os.environ.get("GULGO_ACTOR_HMAC_SECRET", "")
+                    if len(identity_secret) < 64 or len(identity_secret) % 2:
+                        raise HTTPException(503, "Actor identity signing not configured")
+                    # Must match the bytes provisioned in gulgo_identity_secret.
+                    try:
+                        signing_key = bytes.fromhex(identity_secret)
+                    except ValueError as exc:
+                        raise HTTPException(503, "Actor identity signing not configured") from exc
+                    # Obtain the transaction ID from the same live connection.
+                    cur.execute("SELECT txid_current()")
+                    transaction_id = cur.fetchone()[0]
+                    actor_expires = str(int(datetime.now(timezone.utc).timestamp()) + 30)
+                    actor_key_id = os.environ.get("GULGO_ACTOR_KEY_ID", "primary")
+                    if not re.fullmatch(r"[a-z0-9_-]{1,32}", actor_key_id):
+                        raise HTTPException(503, "Actor signing key identifier invalid")
+                    actor_mac = hmac.new(
+                        signing_key,
+                        ("gulgo-actor-v132:" + actor_key_id + ":" + str(actor) + ":" + str(transaction_id) + ":" + actor_expires).encode("utf-8"),
+                        hashlib.sha256,
+                    ).hexdigest()
                     cur.execute("SELECT set_config('app.current_user_id', %s, true)", (str(actor),))
+                    cur.execute("SELECT set_config('app.actor_mac', %s, true)", (actor_mac,))
+                    cur.execute("SELECT set_config('app.actor_expires', %s, true)", (actor_expires,))
+                    cur.execute("SELECT set_config('app.actor_key_id', %s, true)", (actor_key_id,))
                     cur.execute(sql, args)
                     return cur.fetchall()
     except psycopg.Error as exc:

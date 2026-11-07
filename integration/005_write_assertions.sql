@@ -13,7 +13,10 @@ INSERT INTO subject_representation(subject_id,user_id,role,valid_from) VALUES
 INSERT INTO variable_definition(methodology_id,code,label,value_type) VALUES
  ('GULGO_PASS_V1_PILOT','ECO-002','Montant','number');
 SET LOCAL ROLE gulgo_api;
+SELECT set_config('app.actor_expires',(floor(extract(epoch from clock_timestamp()))::bigint + 30)::text,true);
+SELECT set_config('app.actor_key_id','primary',true);
 SELECT set_config('app.current_user_id','11111111-1111-4111-8111-111111111111',true);
+SELECT set_config('app.actor_mac',encode(public.hmac(convert_to('gulgo-actor-v132:primary:11111111-1111-4111-8111-111111111111:' || txid_current()::text || ':' || current_setting('app.actor_expires'),'UTF8'),decode(repeat('ab',32),'hex'),'sha256'),'hex'),true);
 DO $$
 DECLARE v_dossier uuid; v_observation uuid; v_audit int;
 BEGIN
@@ -35,6 +38,7 @@ BEGIN
  END;
 END $$;
 SELECT set_config('app.current_user_id','22222222-2222-4222-8222-222222222222',true);
+SELECT set_config('app.actor_mac',encode(public.hmac(convert_to('gulgo-actor-v132:primary:22222222-2222-4222-8222-222222222222:' || txid_current()::text || ':' || current_setting('app.actor_expires'),'UTF8'),decode(repeat('ab',32),'hex'),'sha256'),'hex'),true);
 DO $$
 DECLARE v_dossier uuid;
 BEGIN
