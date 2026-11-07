@@ -111,13 +111,15 @@ def query_as_actor(actor: UUID, sql: str, args: tuple=()):
                     # Obtain the transaction ID from the same live connection.
                     cur.execute("SELECT txid_current()")
                     transaction_id = cur.fetchone()[0]
+                    actor_expires = str(int(datetime.now(timezone.utc).timestamp()) + 30)
                     actor_mac = hmac.new(
                         signing_key,
-                        ("gulgo-actor-v13:" + str(actor) + ":" + str(transaction_id)).encode("utf-8"),
+                        ("gulgo-actor-v131:" + str(actor) + ":" + str(transaction_id) + ":" + actor_expires).encode("utf-8"),
                         hashlib.sha256,
                     ).hexdigest()
                     cur.execute("SELECT set_config('app.current_user_id', %s, true)", (str(actor),))
                     cur.execute("SELECT set_config('app.actor_mac', %s, true)", (actor_mac,))
+                    cur.execute("SELECT set_config('app.actor_expires', %s, true)", (actor_expires,))
                     cur.execute(sql, args)
                     return cur.fetchall()
     except psycopg.Error as exc:
