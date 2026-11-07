@@ -96,3 +96,24 @@ score n'est créé automatiquement, et les formulaires restent à développer.
 
 Cette étape ne résout pas le risque de falsification de l'identité SQL
 documenté dans `SECURITY_IDENTITY_DECISION_V11.md`.
+
+## Rapport PASS descriptif — PDF de démonstration
+
+La route authentifiée `GET /api/v1/pass/dossiers/{dossier_id}/report.pdf`
+produit un PDF téléchargeable pour un dossier visible par le demandeur.
+Le bouton correspondant figure dans `/demo/pass`. Le rapport reprend
+les six dimensions, les observations renvoyées par l'API, les états de données,
+les sources, périodes et liens de correction. Les variables ne sont associées
+à une dimension que si le catalogue les y rattache sans ambiguïté ; sinon,
+elles figurent dans une section spécifique non rattachée.
+
+**Limitations explicites :** le PDF est non certifié et réservé aux données
+fictives. Il n'attribue aucun score, n'évalue pas la solvabilité, ne vérifie
+pas les justificatifs, et ne constitue pas une décision d'admissibilité.
+L'API source ne renvoie actuellement que les 100 dernières observations ;
+le rapport le signale et n'affirme pas être exhaustif lorsque cette limite
+est atteinte. Le PDF n'est pas archivé comme livrable approuvé.
+
+Le téléchargement répond avec `Cache-Control: no-store, private` et une
+disposition `attachment`. La sécurité demeure conditionnée à la résolution
+du risque SQL décrit dans `SECURITY_IDENTITY_DECISION_V11.md`.
