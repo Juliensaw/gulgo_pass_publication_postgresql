@@ -24,7 +24,7 @@ SELECT set_config('app.current_user_id','31313131-3131-4131-8131-313131313131',t
 -- never grant direct access to the production signing secret to gulgo_api.
 -- MAC is generated from a known, synthetic key literal in this disposable test.
 SELECT set_config('app.actor_mac',
- encode(public.hmac(convert_to('gulgo-actor-v12:31313131-3131-4131-8131-313131313131','UTF8'),
+ encode(public.hmac(convert_to('gulgo-actor-v13:31313131-3131-4131-8131-313131313131:' || txid_current()::text,'UTF8'),
  decode(repeat('ab',32),'hex'),'sha256'),'hex'),true);
 DO $$
 BEGIN
