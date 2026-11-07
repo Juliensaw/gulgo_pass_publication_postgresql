@@ -15,9 +15,9 @@ BEGIN
  THEN RAISE EXCEPTION 'Unsafe role membership'; END IF;
  IF EXISTS (
   SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
-  JOIN pg_roles r ON r.oid=c.relowner
+  JOIN pg_roles owner_role ON owner_role.oid=c.relowner
   WHERE n.nspname='public' AND c.relkind IN ('r','p')
-  AND r.rolname IN ('gulgo_runtime','gulgo_api')
+  AND owner_role.rolname IN ('gulgo_runtime','gulgo_api')
  ) THEN RAISE EXCEPTION 'Runtime role owns protected tables'; END IF;
 END $$;
 ROLLBACK;
