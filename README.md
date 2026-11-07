@@ -56,3 +56,22 @@ et ne doit pas être considéré comme une validation commerciale.
 Étapes de travail suivantes : validation du contenu institutionnel, création
 de la pré-évaluation selon les règles métier approuvées, puis mise en place
 d'une navigation et d'une authentification utilisables vers l'application PASS.
+
+## Préparation à la pré-évaluation — démonstrateur sans collecte
+
+La page institutionnelle dirige maintenant vers `GET /demo/pre-evaluation`.
+Ce questionnaire propose quatre questions qualitatives sur la préparation
+d'une activité économique. Il affiche localement une liste d'éléments à
+clarifier. Aucune réponse n'est transmise au serveur ou conservée en stockage
+navigateur ; aucun nom, chiffre d'affaires, numéro d'identité ou justificatif
+n'est demandé.
+
+**Ce n'est pas la pré-évaluation GULGO officielle.** Les statuts
+« Compatible », « Partiellement compatible » et « Non compatible » ne sont
+pas calculés : leurs critères et leurs conséquences doivent être approuvés
+avant implémentation et testés sur des cas représentatifs. Le parcours ne
+constitue pas une inscription ni une promesse d'accès au financement.
+
+À ce stade, la présence d'une page et de tests unitaires ne constitue ni
+une validation ergonomique par des utilisateurs ni une autorisation de mise
+en production. Voir `MVP_DELIVERY_PLAN_V11.md` pour les conditions de sortie.
