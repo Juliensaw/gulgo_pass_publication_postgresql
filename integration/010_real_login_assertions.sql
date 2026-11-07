@@ -17,6 +17,7 @@ BEGIN
  END IF;
 END $$;
 SET LOCAL ROLE gulgo_api;
+SELECT set_config('app.actor_expires',(floor(extract(epoch from clock_timestamp()))::bigint + 30)::text,true);
 DO $$
 BEGIN
  IF session_user <> 'gulgo_runtime' OR current_user <> 'gulgo_api' THEN
@@ -28,6 +29,6 @@ BEGIN
  END IF;
 END $$;
 SELECT set_config('app.current_user_id','11111111-1111-4111-8111-111111111111',true);
-SELECT set_config('app.actor_mac',encode(public.hmac(convert_to('gulgo-actor-v13:11111111-1111-4111-8111-111111111111:' || txid_current()::text,'UTF8'),decode(repeat('ab',32),'hex'),'sha256'),'hex'),true);
+SELECT set_config('app.actor_mac',encode(public.hmac(convert_to('gulgo-actor-v131:11111111-1111-4111-8111-111111111111:' || txid_current()::text || ':' || current_setting('app.actor_expires'),'UTF8'),decode(repeat('ab',32),'hex'),'sha256'),'hex'),true);
 SELECT count(*) FROM public.economic_subject;
 ROLLBACK;
