@@ -104,6 +104,40 @@ def dossier(dossier_id: UUID, principal: Principal = Depends(verify_token)):
     return {"id":r[0], "subject_id":r[1], "status":r[2], "revision":r[3]}
 
 
+
+@app.get("/api/v1/pass/dossiers/{dossier_id}/observations")
+def dossier_observations(dossier_id: UUID, principal: Principal = Depends(verify_token)):
+    """Return immutable observation history; no scoring or eligibility judgment."""
+    rows = query_as_actor(principal.user_id, """
+        SELECT o.id::text, o.variable_code, o.data_status, o.value_json,
+               o.period_start, o.period_end, o.source_type,
+               o.recorded_at, o.supersedes_id::text
+        FROM variable_observation AS o
+        WHERE o.dossier_id = %s
+          AND EXISTS (SELECT 1 FROM pass_dossier AS d WHERE d.id = o.dossier_id)
+        ORDER BY o.recorded_at DESC, o.id DESC
+        LIMIT 100
+    """, (dossier_id,))
+    if not rows:
+        # RLS intentionally makes an inaccessible dossier indistinguishable
+        # from a missing dossier. An existing empty dossier is still readable.
+        visible = query_as_actor(principal.user_id,
+            "SELECT 1 FROM pass_dossier WHERE id=%s", (dossier_id,))
+        if not visible:
+            raise HTTPException(404, "Dossier not found")
+    return {
+        "dossier_id": str(dossier_id),
+        "observations": [
+            {"id": r[0], "variable_code": r[1], "data_status": r[2],
+             "value": r[3], "period_start": r[4], "period_end": r[5],
+             "source_type": r[6], "recorded_at": r[7], "supersedes_id": r[8]}
+            for r in rows
+        ],
+        "limit": 100,
+        "scoring_enabled": False,
+    }
+
+
 class CreateDossier(BaseModel):
     subject_id: UUID
     methodology_id: str = "GULGO_PASS_V1_PILOT"
