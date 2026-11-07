@@ -18,6 +18,12 @@ INSERT INTO variable_definition(methodology_id,code,label,value_type)
  VALUES('GULGO_PASS_V1_PILOT','V12-WRITE-TEST','V12 synthetic value','text');
 SET LOCAL ROLE gulgo_api;
 SELECT set_config('app.current_user_id','91919191-9191-4191-8191-919191919191',true);
+SELECT set_config('app.actor_mac',encode(public.hmac(convert_to('gulgo-actor-v12:91919191-9191-4191-8191-919191919191','UTF8'),decode(repeat('ab',32),'hex'),'sha256'),'hex'),true);
+-- Confirm the original signed actor A is valid before adversarial writes.
+DO $ BEGIN
+ IF public.gulgo_actor_id() IS DISTINCT FROM '91919191-9191-4191-8191-919191919191'::uuid
+ THEN RAISE EXCEPTION 'FAIL: signed actor A rejected'; END IF;
+END $;
 -- A cannot write to B under the original identity.
 DO $$
 BEGIN
